@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+@keyframes ticker {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.animate-ticker {
+  display: flex;
+  width: max-content;
+  animation: ticker 38s linear infinite;
+  will-change: transform;
+}
+
+.animate-ticker:hover {
+  animation-play-state: paused;
+}
+
+@keyframes threadFeed {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.animate-thread-feed {
+  display: flex;
+  width: max-content;
+  animation: threadFeed 36s linear infinite;
+  will-change: transform;
+}
+
+.animate-thread-feed:hover {
+  animation-play-state: paused;
+}

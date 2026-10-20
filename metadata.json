@@ -1,0 +1,6 @@
+{
+  "name": "Greenspoon Nairobi - Fresh Farm Produce & Artisan Grocer",
+  "description": "Farm-fresh organic produce, highland fruits, artisanal bakery, and pasture-fed dairy delivered fast across Nairobi with automated neighborhood delivery calculation and M-Pesa checkout.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
