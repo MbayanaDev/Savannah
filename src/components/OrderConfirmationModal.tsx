@@ -136,7 +136,7 @@ export const OrderConfirmationModal: React.FC = () => {
   const [selectedAddressId, setSelectedAddressId] = useState<string>('home');
   const [defaultAddressId, setDefaultAddressId] = useState<string>(() => {
     try {
-      const saved = localStorage.getItem('greenspoon_default_address_id');
+      const saved = localStorage.getItem('arcana_default_address_id') || localStorage.getItem('savannah_default_address_id');
       if (saved) return saved;
     } catch (e) {
       console.error(e);
@@ -146,7 +146,7 @@ export const OrderConfirmationModal: React.FC = () => {
 
   useEffect(() => {
     try {
-      localStorage.setItem('greenspoon_default_address_id', defaultAddressId);
+      localStorage.setItem('arcana_default_address_id', defaultAddressId);
     } catch (e) {
       console.error(e);
     }

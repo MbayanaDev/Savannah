@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="savannahGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1b4d35" />
+      <stop offset="100%" stop-color="#0e2418" />
+    </linearGradient>
+    <linearGradient id="leafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399" />
+      <stop offset="50%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fcd34d" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background rounded squircle -->
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="url(#savannahGrad)" />
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="2" />
+
+  <!-- Sun / Dawn crest -->
+  <circle cx="44" cy="20" r="7" fill="url(#goldGrad)" opacity="0.9" />
+
+  <!-- Organic Sprout / Leaf -->
+  <path d="M20 46 C20 46 22 32 34 26 C42 22 46 16 46 16 C46 16 45 28 35 36 C29 42 24 45 20 46 Z" fill="url(#leafGrad)" />
+  
+  <!-- Secondary fresh leaf -->
+  <path d="M22 45 C22 45 26 38 31 38 C35 38 38 36 38 36 C38 36 36 43 29 44 C25 45 23 45 22 45 Z" fill="#6ee7b7" opacity="0.85" />
+
+  <!-- Stem arc -->
+  <path d="M18 48 C22 44 26 38 29 32" fill="none" stroke="#a7f3d0" stroke-width="2.5" stroke-linecap="round" />
+</svg>

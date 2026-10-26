@@ -1,10 +1,59 @@
-export type Category = 'All' | 'Veg' | 'Fruits' | 'Aromatics';
+export type Category = 'All' | 'Veg' | 'Fruits' | 'Aromatics' | string;
+
+export type ViewMode = 'store' | 'admin' | 'about' | 'faqs' | 'purpose' | 'privacy' | 'terms' | 'refunds' | 'blog' | 'arcana';
 
 export interface CategoryInfo {
   id: Category;
   label: string;
   image: string;
   tagline: string;
+  slug?: string;
+}
+
+export interface SubcategoryItem {
+  id: string;
+  name: string;
+  category: Category;
+  categoryId?: string;
+  image: string;
+  slug?: string;
+  subcategoryId?: string;
+  description?: string;
+}
+
+export interface VariantSpecification {
+  product_specification: string;
+  count: number;
+  in_stock: boolean;
+  note?: string;
+  description?: string;
+  price_adjustment?: number;
+  tag?: string;
+  is_default?: boolean;
+  isDefault?: boolean;
+}
+
+export interface ProductVariantItem {
+  id: string;
+  sku: string;
+  name: string;
+  price: number;
+  compareAtPrice?: number | null;
+  costPrice?: number | null;
+  stockQuantity: number;
+  isDefault: boolean;
+  unitQuantity?: number | null;
+  weightGrams?: number | null;
+  estWeightGrams?: number | null;
+  est_weight_grams?: number | null;
+  packaging?: string | null;
+  packaging_unit?: string | null;
+  packagingUnit?: string | null;
+  approxCount?: number | string | null;
+  approx_count?: number | string | null;
+  skuUnitId?: string | null;
+  barcode?: string | null;
+  specifications?: VariantSpecification[];
 }
 
 export interface Product {
@@ -12,8 +61,16 @@ export interface Product {
   name: string;
   category: Category;
   subcategory?: string;
+  subcategoryId?: string;
+  categoryId?: string;
+  productCode?: string | null;
+  sku?: string;
+  variantId?: string;
+  brand?: string | null;
+  slug?: string;
   origin: string; // e.g. "Limuru Highland Farm, Kiambu"
   price: number; // in KES
+  compareAtPrice?: number | null;
   unit: string; // e.g. "per kg", "500g punnet", "750g loaf", "1L bottle"
   stock: number;
   lowStockThreshold: number;
@@ -24,6 +81,16 @@ export interface Product {
   storageTip: string;
   nutrition: string[];
   popular?: boolean;
+  estWeightGrams?: number | null;
+  est_weight_grams?: number | null;
+  packaging?: string | null;
+  packaging_unit?: string | null;
+  packagingUnit?: string | null;
+  approxCount?: number | string | null;
+  approx_count?: number | string | null;
+  specifications?: VariantSpecification[];
+  selectedSpecification?: VariantSpecification;
+  variants?: ProductVariantItem[];
 }
 
 export interface NairobiNeighborhood {
@@ -90,4 +157,13 @@ export interface OrderAnalytics {
   activeCartsCount: number;
   neighborhoodBreakdown: { name: string; count: number; revenue: number }[];
   categoryRevenue: { category: string; revenue: number }[];
+}
+
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  avatarUrl?: string;
+  provider: 'google' | 'guest';
 }

@@ -8,8 +8,12 @@ import {
   PackageCheck, 
   Phone, 
   Search,
-  SlidersHorizontal
+  SlidersHorizontal,
+  User,
+  Database,
+  RefreshCw
 } from 'lucide-react';
+import { MajesticDoorIcon } from './icons/MajesticDoorIcon';
 import { useStore } from '../context/StoreContext';
 import { Category } from '../types';
 import { CATEGORIES_CONFIG, SUBCATEGORIES_CONFIG } from '../data/products';
@@ -62,16 +66,24 @@ export const Header: React.FC = () => {
     setSelectedCategory,
     selectedSubcategory,
     setSelectedSubcategory,
+    categoriesList,
+    subcategoriesList,
+    isSupabaseLive,
+    syncCategoriesFromSupabase,
     setActiveMobileTab,
     orders,
     setActiveTrackOrder,
     searchQuery,
     setSearchQuery,
-    showToast
+    showToast,
+    isProfileOpen,
+    setIsProfileOpen,
+    currentUser
   } = useStore();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showSubcategoriesInHeader, setShowSubcategoriesInHeader] = useState(false);
+  const [isSyncingCategories, setIsSyncingCategories] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -110,12 +122,34 @@ export const Header: React.FC = () => {
   }, [isMenuOpen]);
 
   const activeSubcategories = selectedCategory === 'All'
-    ? SUBCATEGORIES_CONFIG
-    : SUBCATEGORIES_CONFIG.filter(sub => sub.category === selectedCategory);
+    ? subcategoriesList
+    : subcategoriesList.filter(sub => 
+        sub.category === selectedCategory || 
+        sub.categoryId === selectedCategory ||
+        (selectedCategory === 'Veg' && (
+          sub.categoryId === 'd54bb4bf-9351-4b65-be84-8fe4c6c5e007' ||
+          sub.slug === 'cooking-staples' || 
+          sub.slug === 'salads-crunchy-greens' || 
+          sub.slug === 'staple-greens' || 
+          sub.slug === 'pods-legumes'
+        )) ||
+        (selectedCategory === 'Fruits' && (
+          sub.slug === 'tropical-staples' || 
+          sub.slug === 'citrus-juicing' || 
+          sub.slug === 'orchard-berries'
+        )) ||
+        (selectedCategory === 'Aromatics' && (
+          sub.categoryId === 'a2c5bba0-1bdb-44d9-8fbf-c7c08ab450e7' ||
+          sub.slug === 'fresh-aromatics' || 
+          sub.slug === 'fresh-herbs'
+        ))
+      );
 
-  const shopperName = orders.length > 0 && orders[0].customerName
-    ? orders[0].customerName.trim().split(' ')[0]
-    : 'Kelvin';
+  const shopperName = currentUser?.name
+    ? currentUser.name.trim().split(' ')[0]
+    : orders.length > 0 && orders[0].customerName
+      ? orders[0].customerName.trim().split(' ')[0]
+      : 'Shopper';
 
 
 
@@ -139,16 +173,6 @@ export const Header: React.FC = () => {
     }
   };
 
-  const handleSwitchMode = () => {
-    const nextMode = viewMode === 'store' ? 'admin' : 'store';
-    setViewMode(nextMode);
-    if (nextMode === 'admin') {
-      setActiveMobileTab('admin');
-    } else {
-      setActiveMobileTab('shop');
-    }
-    setIsMenuOpen(false);
-  };
 
   const handleUtilities = () => {
     setIsNeighborhoodModalOpen(true);
@@ -201,6 +225,20 @@ export const Header: React.FC = () => {
               <span className="truncate max-w-[105px] font-medium">{selectedNeighborhood.name}</span>
             </button>
 
+            {/* Account / Profile Button */}
+            <button
+              onClick={() => setIsProfileOpen(true)}
+              className="hidden sm:flex items-center justify-center w-8 h-8 rounded-lg text-stone-800 hover:bg-stone-200/60 active:scale-95 transition-all cursor-pointer"
+              aria-label="Account settings"
+              title={currentUser ? currentUser.name : 'Account settings & Sign in'}
+            >
+              {currentUser?.avatarUrl ? (
+                <img src={currentUser.avatarUrl} alt={currentUser.name} className="w-5 h-5 rounded-full object-cover" />
+              ) : (
+                <User className="w-4 h-4 text-stone-700" />
+              )}
+            </button>
+
             {/* Compact Cart Icon Button with Notification Badge */}
             <button
               onClick={() => setIsCartOpen(true)}
@@ -220,8 +258,8 @@ export const Header: React.FC = () => {
 
         {/* Search Container: Search bar */}
         {viewMode === 'store' && (
-          <div className="pb-1.5 pt-0.5">
-            <div className="max-w-7xl mx-auto px-4 mb-1.5">
+          <div className="pb-1 pt-0.5">
+            <div className="max-w-7xl mx-auto px-4 mb-0.5">
               <div className="relative w-full">
                 <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
@@ -247,29 +285,43 @@ export const Header: React.FC = () => {
 
         {/* Row of Fresh Categories replacing the previous live feed row - Replaced by subcategories when upscrolled */}
         {viewMode === 'store' && (
-          <div id="header-nav-bar" className="bg-[#FBF9F5] border-t border-stone-200/80 overflow-x-auto scrollbar-none py-2 px-3 sm:px-6 transition-all duration-200">
+          <div id="header-nav-bar" className="bg-[#FBF9F5] border-t border-stone-200/80 overflow-x-auto scrollbar-none pt-1 pb-1 px-3 sm:px-6 transition-all duration-200">
             {!showSubcategoriesInHeader ? (
-              <div className="max-w-7xl mx-auto flex items-center justify-start sm:justify-center gap-3 sm:gap-6 md:gap-8 whitespace-nowrap animate-in fade-in duration-200">
-                {CATEGORIES_CONFIG.map((cat) => {
+              <div className="max-w-7xl mx-auto flex items-center justify-center gap-4 sm:gap-6 md:gap-8 whitespace-nowrap animate-in fade-in duration-200">
+                {categoriesList.map((cat) => {
                   const isActive = selectedCategory === cat.id;
                   return (
                     <button
                       key={cat.id}
                       onClick={() => handleNavClick(cat.id)}
-                      className={`flex items-center gap-1.5 cursor-pointer shrink-0 group focus:outline-none transition-all px-1.5 sm:px-2 py-1 rounded-xl ${
-                        isActive
-                          ? 'border-2 border-[#173b28] bg-white shadow-2xs'
-                          : 'border-2 border-transparent hover:border-stone-200/80 hover:bg-stone-100/50'
-                      }`}
+                      className="flex flex-col items-center gap-1 cursor-pointer shrink-0 group focus:outline-none transition-all pt-0.5 pb-0.5 px-1 bg-transparent"
                     >
                       <img
-                        src={cat.image}
+                        src={
+                          cat.id === 'All' || cat.label?.toLowerCase() === 'all' || cat.slug === 'all'
+                            ? '/icons/categories/all.png'
+                            : (cat.image || '/icons/categories/all.png')
+                        }
                         alt={cat.label}
-                        className="w-6 h-6 sm:w-7 sm:h-7 aspect-square rounded-md object-cover shrink-0 border border-stone-200/80 shadow-2xs transition-transform duration-200 group-hover:scale-105"
+                        className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover shrink-0 transition-transform duration-200 group-hover:scale-105 ${
+                          isActive
+                            ? 'ring-2 ring-[#173b28] ring-offset-2 shadow-xs'
+                            : 'opacity-90 group-hover:opacity-100'
+                        }`}
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          if (!target.dataset.fallbackTried) {
+                            target.dataset.fallbackTried = '1';
+                            target.src = '/public/icons/categories/all.png';
+                          } else if (target.dataset.fallbackTried === '1') {
+                            target.dataset.fallbackTried = '2';
+                            target.src = '/src/assets/images/all.png';
+                          }
+                        }}
                         referrerPolicy="no-referrer"
                       />
                       <span
-                        className={`text-xs sm:text-sm tracking-tight transition-colors ${
+                        className={`text-xs sm:text-sm tracking-tight text-center transition-colors whitespace-nowrap ${
                           isActive
                             ? 'font-bold text-[#173b28]'
                             : 'font-medium text-stone-700 group-hover:text-stone-900'
@@ -282,39 +334,38 @@ export const Header: React.FC = () => {
                 })}
               </div>
             ) : (
-              <div className="max-w-7xl mx-auto flex items-center justify-start sm:justify-center gap-2 sm:gap-4 md:gap-6 whitespace-nowrap animate-in fade-in duration-200">
-                {/* Back to Aisles */}
-                <button
-                  onClick={() => {
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  className="flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-stone-600 hover:text-stone-900 bg-stone-200/70 hover:bg-stone-200 px-2 py-1 rounded-xl shrink-0 cursor-pointer transition-colors"
-                  title="Scroll back to all Aisles"
-                >
-                  ‹ Aisles
-                </button>
-
+              <div className="max-w-7xl mx-auto flex items-center justify-center gap-4 sm:gap-6 md:gap-8 whitespace-nowrap animate-in fade-in duration-200">
                 {/* All subcategory in active category */}
                 <button
                   onClick={() => {
                     setSelectedSubcategory(null);
                     showToast(`Showing all in ${selectedCategory}`, 'info');
                   }}
-                  className={`flex items-center gap-1.5 cursor-pointer shrink-0 group focus:outline-none transition-all px-1.5 sm:px-2 py-1 rounded-xl ${
-                    selectedSubcategory === null
-                      ? 'border-2 border-[#173b28] bg-white shadow-2xs'
-                      : 'border-2 border-transparent hover:border-stone-200/80 hover:bg-stone-100/50'
-                  }`}
+                  className="flex flex-col items-center gap-1 cursor-pointer shrink-0 group focus:outline-none transition-all pt-0.5 pb-0.5 px-1 bg-transparent"
                   title="View all produce in this aisle"
                 >
                   <img
-                    src="/src/assets/images/hero_fresh_produce_basket_1792228072880.jpg"
+                    src="/icons/categories/all.png"
                     alt="All"
-                    className="w-6 h-6 sm:w-7 sm:h-7 aspect-square rounded-full object-cover shrink-0 border border-stone-200/80 shadow-2xs"
+                    className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover shrink-0 transition-transform duration-200 group-hover:scale-105 ${
+                      selectedSubcategory === null
+                        ? 'ring-2 ring-[#173b28] ring-offset-2 shadow-xs'
+                        : 'opacity-90 group-hover:opacity-100'
+                    }`}
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      if (!target.dataset.fallbackTried) {
+                        target.dataset.fallbackTried = '1';
+                        target.src = '/public/icons/categories/all.png';
+                      } else if (target.dataset.fallbackTried === '1') {
+                        target.dataset.fallbackTried = '2';
+                        target.src = '/src/assets/images/all.png';
+                      }
+                    }}
                     referrerPolicy="no-referrer"
                   />
                   <span
-                    className={`text-xs sm:text-sm tracking-tight transition-colors whitespace-nowrap ${
+                    className={`text-xs sm:text-sm tracking-tight text-center transition-colors whitespace-nowrap ${
                       selectedSubcategory === null
                         ? 'font-bold text-[#173b28]'
                         : 'font-medium text-stone-700 group-hover:text-stone-900'
@@ -337,21 +388,21 @@ export const Header: React.FC = () => {
                           setSelectedSubcategory(subcat.id);
                         }
                       }}
-                      className={`flex items-center gap-1.5 cursor-pointer shrink-0 group focus:outline-none transition-all px-1.5 sm:px-2 py-1 rounded-xl ${
-                        isSelected
-                          ? 'border-2 border-[#173b28] bg-white shadow-2xs'
-                          : 'border-2 border-transparent hover:border-stone-200/80 hover:bg-stone-100/50'
-                      }`}
+                      className="flex flex-col items-center gap-1 cursor-pointer shrink-0 group focus:outline-none transition-all pt-0.5 pb-0.5 px-1 bg-transparent"
                       title={`Filter by ${subcat.name}`}
                     >
                       <img
                         src={subcat.image}
                         alt={subcat.name}
-                        className="w-6 h-6 sm:w-7 sm:h-7 aspect-square rounded-full object-cover shrink-0 border border-stone-200/80 shadow-2xs transition-transform duration-200 group-hover:scale-105"
+                        className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover shrink-0 transition-transform duration-200 group-hover:scale-105 ${
+                          isSelected
+                            ? 'ring-2 ring-[#173b28] ring-offset-2 shadow-xs'
+                            : 'opacity-90 group-hover:opacity-100'
+                        }`}
                         referrerPolicy="no-referrer"
                       />
                       <span
-                        className={`text-xs sm:text-sm tracking-tight transition-colors whitespace-nowrap ${
+                        className={`text-xs sm:text-sm tracking-tight text-center transition-colors whitespace-nowrap ${
                           isSelected
                             ? 'font-bold text-[#173b28]'
                             : 'font-medium text-stone-700 group-hover:text-stone-900'
@@ -417,7 +468,7 @@ export const Header: React.FC = () => {
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {/* Produce Categories in 3-column responsive grid: No parent container, highlight text & image */}
                 <div className="grid grid-cols-3 gap-2">
-                  {CATEGORIES_CONFIG.map((cat) => {
+                  {categoriesList.map((cat) => {
                     const isActive = selectedCategory === cat.id;
                     return (
                       <button
@@ -474,7 +525,8 @@ export const Header: React.FC = () => {
                 </div>
 
                 {/* Orders and Tracking (Merchant hub console and Orders & Hub heading removed) */}
-                <div className="pt-2 border-t border-stone-100">
+                {/* Orders and Account */}
+                <div className="pt-2 border-t border-stone-100 space-y-1">
                   <button
                     onClick={handleTrackRecentOrder}
                     className="w-full px-3 py-2.5 rounded-xl text-left text-xs sm:text-sm font-medium text-stone-800 hover:bg-stone-100 hover:text-[#173b28] transition-colors flex items-center justify-between cursor-pointer"
@@ -485,6 +537,74 @@ export const Header: React.FC = () => {
                     </div>
                     <ChevronRight className="w-3.5 h-3.5 text-stone-400" />
                   </button>
+
+                  <button
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      setIsProfileOpen(true);
+                    }}
+                    className="w-full px-3 py-2.5 rounded-xl text-left text-xs sm:text-sm font-medium text-stone-800 hover:bg-stone-100 hover:text-[#173b28] transition-colors flex items-center justify-between cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <User className="w-4 h-4 text-stone-500" />
+                      <span>{currentUser ? 'Account settings' : 'Sign up / Log in'}</span>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-stone-400" />
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      setViewMode('arcana');
+                    }}
+                    className="w-full px-3 py-2.5 rounded-xl text-left text-xs sm:text-sm font-medium text-emerald-950 bg-gradient-to-r from-emerald-50 via-white to-amber-50/50 hover:from-emerald-100/80 hover:to-amber-100/70 transition-all flex items-center justify-between cursor-pointer border border-emerald-300/80 mt-1 shadow-2xs group"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-[#173b28] text-amber-300 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-xs">
+                        <MajesticDoorIcon className="w-4.5 h-4.5 text-amber-300" />
+                      </div>
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-extrabold text-stone-900 tracking-tight">Savannah Arcana</span>
+                          <span className="text-[9px] bg-amber-400/20 text-amber-900 border border-amber-300/60 px-1.5 py-0.2 rounded-full font-bold">EXCLUSIVE</span>
+                        </div>
+                        <span className="text-[10px] text-emerald-800 font-medium">The door to sustainability &amp; farmers</span>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-emerald-800 group-hover:translate-x-0.5 transition-transform" />
+                  </button>
+
+                  {/* Supabase Database Categories Status & Sync */}
+                  <div className="mt-3 p-2.5 rounded-xl border border-stone-200/90 bg-stone-50/90 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-7 h-7 rounded-lg bg-emerald-100 text-[#173b28] flex items-center justify-center shrink-0 border border-emerald-200/60 shadow-2xs">
+                        <Database className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <div className="flex items-center gap-1.5 font-semibold text-stone-800">
+                          <span className="truncate">Supabase Categories</span>
+                          <span className={`w-2 h-2 rounded-full shrink-0 ${isSupabaseLive ? 'bg-emerald-500 animate-pulse' : 'bg-emerald-400'}`} />
+                        </div>
+                        <span className="text-[10px] text-stone-500 font-mono truncate">
+                          {categoriesList.length} categories • {isSupabaseLive ? 'Live Remote DB' : 'Connected'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={async () => {
+                        setIsSyncingCategories(true);
+                        await syncCategoriesFromSupabase();
+                        setIsSyncingCategories(false);
+                      }}
+                      disabled={isSyncingCategories}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-stone-200 hover:border-[#173b28] hover:text-[#173b28] text-stone-700 text-[11px] font-semibold transition-all shadow-2xs cursor-pointer disabled:opacity-50 shrink-0 ml-2"
+                      title="Sync categories directly from Supabase"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${isSyncingCategories ? 'animate-spin text-[#173b28]' : ''}`} />
+                      <span>{isSyncingCategories ? 'Syncing...' : 'Sync'}</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 

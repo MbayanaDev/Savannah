@@ -1,5 +1,6 @@
 import React from 'react';
-import { Home, Zap, ShoppingBag, PackageCheck, User } from 'lucide-react';
+import { Home, ShoppingBag, PackageCheck, User } from 'lucide-react';
+import { MajesticDoorIcon } from './icons/MajesticDoorIcon';
 import { useStore } from '../context/StoreContext';
 
 export const MobileBottomNav: React.FC = () => {
@@ -27,6 +28,8 @@ export const MobileBottomNav: React.FC = () => {
       if (orders.length > 0) {
         setActiveTrackOrder(orders[0]);
       }
+    } else if (tab === 'arcana') {
+      setViewMode('arcana');
     } else {
       setViewMode('store');
     }
@@ -48,20 +51,29 @@ export const MobileBottomNav: React.FC = () => {
           <span className="text-[10px] tracking-tight mt-1">Shop</span>
         </button>
 
-        {/* Tab 2: Express (renamed from Aisles) */}
+        {/* Tab 2: Savannah Arcana */}
         <button
-          onClick={() => {
-            handleTabClick('express');
-            window.scrollTo({ top: 380, behavior: 'smooth' });
-          }}
-          className={`flex flex-col items-center justify-center min-h-[48px] py-1 transition-colors cursor-pointer ${
-            activeMobileTab === 'express' && viewMode === 'store'
-              ? 'text-[#173b28] font-semibold'
-              : 'text-stone-500 hover:text-stone-800'
+          onClick={() => handleTabClick('arcana')}
+          className={`flex flex-col items-center justify-center min-h-[48px] py-1 transition-colors cursor-pointer group ${
+            activeMobileTab === 'arcana' || viewMode === 'arcana'
+              ? 'text-emerald-800 font-bold'
+              : 'text-stone-500 hover:text-emerald-800'
           }`}
+          title="Savannah Arcana: Exclusive Door to Solar, Farmers & Integrity"
         >
-          <Zap className="w-5 h-5" />
-          <span className="text-[10px] tracking-tight mt-1">Express</span>
+          <div className="relative">
+            <MajesticDoorIcon className={`w-5 h-5 transition-transform group-hover:scale-110 ${
+              activeMobileTab === 'arcana' || viewMode === 'arcana' 
+                ? 'text-emerald-800 drop-shadow-[0_1px_3px_rgba(23,59,40,0.25)]' 
+                : 'text-stone-500'
+            }`} />
+            {(activeMobileTab === 'arcana' || viewMode === 'arcana') && (
+              <span className="absolute -top-0.5 -right-1 w-1.5 h-1.5 rounded-full bg-amber-400 ring-1 ring-white" />
+            )}
+          </div>
+          <span className="text-[9.5px] font-semibold tracking-tight mt-1 text-center whitespace-nowrap">
+            Savannah Arcana
+          </span>
         </button>
 
         {/* Tab 3: Cart */}

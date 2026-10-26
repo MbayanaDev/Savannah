@@ -39,3 +39,66 @@
 .animate-thread-feed:hover {
   animation-play-state: paused;
 }
+
+@keyframes scrollUp {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-50%);
+  }
+}
+
+.animate-scroll-up {
+  display: flex;
+  flex-direction: column;
+  animation: scrollUp 22s linear infinite;
+  will-change: transform;
+}
+
+.animate-scroll-up:hover {
+  animation-play-state: paused;
+}
+
+@keyframes partnerLoop {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.animate-partner-loop {
+  display: flex;
+  width: max-content;
+  animation: partnerLoop 32s linear infinite;
+  will-change: transform;
+}
+
+.animate-partner-loop:hover {
+  animation-play-state: paused;
+}
+
+@keyframes scrollPills {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.animate-scroll-pills {
+  display: flex;
+  width: max-content;
+  animation: scrollPills 18s linear infinite;
+  will-change: transform;
+}
+
+.animate-scroll-pills:hover {
+  animation-play-state: paused;
+}
+
+
+

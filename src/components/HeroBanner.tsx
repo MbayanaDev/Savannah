@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Zap } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
-import { SUBCATEGORIES_CONFIG } from '../data/products';
 
 interface CarouselImage {
   id: string;
@@ -51,6 +50,7 @@ export const HeroBanner: React.FC = () => {
     selectedSubcategory,
     setSelectedSubcategory,
     setSelectedCategory,
+    subcategoriesList,
     showToast
   } = useStore();
 
@@ -134,10 +134,30 @@ export const HeroBanner: React.FC = () => {
 
   const fullTickerList = [...tickerItems, ...tickerItems];
 
-  // Subcategories to display depending on selected category
+  // Subcategories to display depending on selected category (linked to Supabase tables)
   const visibleSubcategories = selectedCategory === 'All'
-    ? SUBCATEGORIES_CONFIG
-    : SUBCATEGORIES_CONFIG.filter(sub => sub.category === selectedCategory);
+    ? subcategoriesList
+    : subcategoriesList.filter(sub => 
+        sub.category === selectedCategory || 
+        sub.categoryId === selectedCategory ||
+        (selectedCategory === 'Veg' && (
+          sub.categoryId === 'd54bb4bf-9351-4b65-be84-8fe4c6c5e007' ||
+          sub.slug === 'cooking-staples' || 
+          sub.slug === 'salads-crunchy-greens' || 
+          sub.slug === 'staple-greens' || 
+          sub.slug === 'pods-legumes'
+        )) ||
+        (selectedCategory === 'Fruits' && (
+          sub.slug === 'tropical-staples' || 
+          sub.slug === 'citrus-juicing' || 
+          sub.slug === 'orchard-berries'
+        )) ||
+        (selectedCategory === 'Aromatics' && (
+          sub.categoryId === 'a2c5bba0-1bdb-44d9-8fbf-c7c08ab450e7' ||
+          sub.slug === 'fresh-aromatics' || 
+          sub.slug === 'fresh-herbs'
+        ))
+      );
 
   const handleSubcategoryClick = (subcatId: string) => {
     if (selectedSubcategory === subcatId) {
@@ -250,13 +270,23 @@ export const HeroBanner: React.FC = () => {
             title="View all produce in this aisle"
           >
             <img
-              src="/src/assets/images/hero_fresh_produce_basket_1792228072880.jpg"
+              src="/icons/categories/all.png"
               alt="All"
               className={`w-13 h-13 sm:w-16 sm:h-16 rounded-full object-cover transition-all duration-200 group-hover:scale-105 select-none pointer-events-none ${
                 selectedSubcategory === null
                   ? 'ring-2 ring-offset-2 ring-[#173b28] scale-105'
                   : 'opacity-90 hover:opacity-100'
               }`}
+              onError={(e) => {
+                const target = e.currentTarget;
+                if (!target.dataset.fallbackTried) {
+                  target.dataset.fallbackTried = '1';
+                  target.src = '/public/icons/categories/all.png';
+                } else if (target.dataset.fallbackTried === '1') {
+                  target.dataset.fallbackTried = '2';
+                  target.src = '/src/assets/images/all.png';
+                }
+              }}
             />
             <span className={`text-[11px] sm:text-xs text-center leading-tight whitespace-nowrap transition-colors ${
               selectedSubcategory === null

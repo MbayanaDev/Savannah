@@ -6,7 +6,7 @@ import { OrderDispatch } from './OrderDispatch';
 import { useStore } from '../../context/StoreContext';
 
 export const AdminDashboard: React.FC = () => {
-  const { setViewMode, setActiveMobileTab, orders } = useStore();
+  const { setViewMode, setActiveMobileTab, orders, isSupabaseLive } = useStore();
   const [subTab, setSubTab] = useState<'analytics' | 'inventory' | 'orders'>('analytics');
 
   const pendingOrdersCount = orders.filter(o => o.status === 'new' || o.status === 'packing').length;
@@ -32,9 +32,17 @@ export const AdminDashboard: React.FC = () => {
               <h1 className="font-display font-bold text-lg sm:text-xl text-stone-900">
                 Savannah Fresh Hub Operations
               </h1>
-              <p className="text-xs text-stone-500">
-                Nairobi Metro fulfillment &amp; live logistics console
-              </p>
+              <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                  isSupabaseLive 
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                    : 'bg-stone-100 text-stone-600 border-stone-200'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${isSupabaseLive ? 'bg-emerald-500 animate-pulse' : 'bg-stone-400'}`} />
+                  {isSupabaseLive ? 'Supabase DB Linked (categories, products, variants)' : 'Supabase: Ready for Anon Key'}
+                </span>
+                <span className="text-[10px] text-stone-400 font-mono hidden sm:inline">xkzktrrtjjenjnbnheba.supabase.co</span>
+              </div>
             </div>
           </div>
 

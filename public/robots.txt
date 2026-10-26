@@ -1,0 +1,5 @@
+# Robots.txt for Savannah Fresh
+User-agent: *
+Allow: /
+
+Sitemap: https://savannah-tau.vercel.app/sitemap.xml

@@ -146,8 +146,14 @@ export const CartDrawer: React.FC = () => {
                       <h4 className="font-semibold text-stone-900 text-xs sm:text-sm line-clamp-1">
                         {product.name}
                       </h4>
-                      <div className="text-[11px] text-stone-500 truncate">
-                        {product.unit}
+                      <div className="text-[11px] text-stone-500 truncate flex items-center gap-1.5 flex-wrap">
+                        <span>{product.unit}</span>
+                        {product.selectedSpecification && (
+                          <span className="text-[10px] text-emerald-800 font-medium bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                            {product.selectedSpecification.product_specification.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                            {product.selectedSpecification.note ? ` · ${product.selectedSpecification.note}` : ''}
+                          </span>
+                        )}
                       </div>
                       <div className="font-mono font-bold text-xs sm:text-sm text-stone-900 mt-1 tabular-nums">
                         KES {(product.price * quantity).toLocaleString()}
@@ -163,7 +169,7 @@ export const CartDrawer: React.FC = () => {
                     <div className="flex flex-col items-end gap-1 shrink-0">
                       <div className="flex items-center bg-stone-100 rounded-lg border border-stone-200 p-0.5">
                         <button
-                          onClick={() => updateQuantity(product.id, quantity - 1)}
+                          onClick={() => updateQuantity(product.id, quantity - 1, product.selectedSpecification?.product_specification)}
                           className="w-7 h-7 flex items-center justify-center text-stone-600 hover:text-stone-900 cursor-pointer"
                           aria-label="Decrease"
                         >
@@ -173,7 +179,7 @@ export const CartDrawer: React.FC = () => {
                           {quantity}
                         </span>
                         <button
-                          onClick={() => updateQuantity(product.id, quantity + 1)}
+                          onClick={() => updateQuantity(product.id, quantity + 1, product.selectedSpecification?.product_specification)}
                           disabled={quantity >= product.stock}
                           className="w-7 h-7 flex items-center justify-center text-stone-600 hover:text-stone-900 cursor-pointer disabled:opacity-40"
                           aria-label="Increase"
@@ -185,7 +191,7 @@ export const CartDrawer: React.FC = () => {
                       {/* Delete/remove icon button to the right below of the counter */}
                       <button
                         type="button"
-                        onClick={() => removeFromCart(product.id)}
+                        onClick={() => removeFromCart(product.id, product.selectedSpecification?.product_specification)}
                         className="p-1 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
                         title={`Remove ${product.name}`}
                         aria-label={`Remove ${product.name}`}

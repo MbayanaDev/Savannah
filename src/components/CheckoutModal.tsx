@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, ArrowRight, Check, Loader2, MapPin, ChevronDown, Bike } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Loader2, MapPin, ChevronDown, Bike, Wallet, Banknote } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { NAIROBI_NEIGHBORHOODS } from '../data/neighborhoods';
 
@@ -66,7 +66,7 @@ export const CheckoutModal: React.FC = () => {
       }
     }
   }, [activeSavedAddress]);
-  const [paymentMethod, setPaymentMethod] = useState<'mpesa' | 'card' | 'cod'>('mpesa');
+  const [paymentMethod, setPaymentMethod] = useState<'mpesa' | 'cash'>('mpesa');
 
   // M-Pesa STK Push Simulation state
   const [isProcessing, setIsProcessing] = useState(false);
@@ -180,54 +180,49 @@ export const CheckoutModal: React.FC = () => {
           <div className="overflow-y-auto flex-1 px-4 pt-2.5 pb-4 sm:px-6 sm:pt-3 sm:pb-5 space-y-4">
           {/* Section: Delivery Location */}
           <div className="space-y-3">
-            {/* Container with Name and Chosen Address */}
-            <div className="bg-stone-50/80 border border-stone-200/90 rounded-2xl p-3.5 sm:p-4 shadow-2xs space-y-2.5">
-              <div className="text-xs font-semibold text-stone-700">
-                Your order will be delivered to:
-              </div>
-
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-2.5 min-w-0">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-200/70 text-emerald-800 flex items-center justify-center shrink-0 mt-0.5">
-                    <MapPin className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0 space-y-0.5">
-                    <div className="font-bold text-stone-900 text-sm">
-                      {name}
-                    </div>
-                    <div className="text-xs font-semibold text-stone-800 leading-snug break-words">
-                      {activeSavedAddress 
-                        ? `${activeSavedAddress.apartment}, ${activeSavedAddress.street}` 
-                        : address}
-                    </div>
-                    <div className="text-[11px] text-stone-500 leading-tight">
-                      {activeSavedAddress ? activeSavedAddress.region : selectedNeighborhood.name}, Nairobi
-                    </div>
-                    {activeSavedAddress?.reference && (
-                      <div className="text-[10px] text-stone-400 leading-tight pt-0.5">
-                        Ref: {activeSavedAddress.reference}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
+            {/* Container with Name and Chosen Address - Compact */}
+            <div className="bg-stone-50/80 border border-stone-200/90 rounded-2xl p-2.5 sm:p-3 shadow-2xs space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] sm:text-xs font-semibold text-stone-700">
+                  Your order will be delivered to:
+                </span>
                 <button
                   type="button"
                   onClick={() => setIsChangingAddress(!isChangingAddress)}
-                  className="px-2.5 py-1 bg-white hover:bg-emerald-50 text-emerald-800 hover:text-emerald-900 border border-emerald-300 rounded-lg text-xs font-semibold shadow-2xs transition-colors cursor-pointer shrink-0 flex items-center gap-1"
+                  className="px-2 py-0.5 bg-white hover:bg-emerald-50 text-emerald-800 hover:text-emerald-900 border border-emerald-300 rounded-md text-[11px] font-semibold shadow-2xs transition-colors cursor-pointer shrink-0 flex items-center gap-1"
                 >
                   <span>{isChangingAddress ? 'Close' : 'Change'}</span>
-                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isChangingAddress ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`w-3 h-3 transition-transform ${isChangingAddress ? 'rotate-180' : ''}`} />
                 </button>
+              </div>
+
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-6 h-6 rounded-lg bg-emerald-50 border border-emerald-200/70 text-emerald-800 flex items-center justify-center shrink-0">
+                  <MapPin className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0 flex-1 leading-tight">
+                  <div className="text-xs sm:text-sm font-bold text-stone-900 truncate">
+                    <span>{name}</span>
+                    <span className="font-normal text-stone-400 mx-1.5">·</span>
+                    <span className="font-semibold text-stone-800">
+                      {activeSavedAddress 
+                        ? `${activeSavedAddress.apartment}, ${activeSavedAddress.street}` 
+                        : address}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-stone-500 truncate mt-0.5">
+                    {activeSavedAddress ? activeSavedAddress.region : selectedNeighborhood.name}, Nairobi{activeSavedAddress?.reference ? ` · Ref: ${activeSavedAddress.reference}` : ''}
+                  </div>
+                </div>
               </div>
 
               {/* Saved Address Switcher Drawer */}
               {isChangingAddress && (
-                <div className="mt-3 pt-3 border-t border-stone-200 space-y-2 animate-in fade-in duration-150">
+                <div className="mt-2 pt-2 border-t border-stone-200 space-y-1.5 animate-in fade-in duration-150">
                   <div className="text-[11px] font-semibold text-stone-600">
                     Select a drop-off location:
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                     {savedAddresses.map((addr) => {
                       const isSelected = activeSavedAddress?.id === addr.id;
                       return (
@@ -238,7 +233,7 @@ export const CheckoutModal: React.FC = () => {
                             selectAddress(addr.id);
                             setIsChangingAddress(false);
                           }}
-                          className={`p-2.5 rounded-xl border text-left text-xs transition-all cursor-pointer flex flex-col justify-between gap-1 ${
+                          className={`p-2 rounded-xl border text-left text-xs transition-all cursor-pointer flex flex-col justify-between gap-0.5 ${
                             isSelected
                               ? 'border-[#173b28] bg-[#EBF5ED] text-[#173b28] ring-1 ring-[#173b28]'
                               : 'border-stone-200 bg-white hover:bg-stone-50 text-stone-700'
@@ -430,6 +425,93 @@ export const CheckoutModal: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Payment Method Container (Options for Cash and Mpesa) */}
+            <div className="bg-stone-50/80 border border-stone-200/90 rounded-2xl p-3 sm:p-3.5 shadow-2xs space-y-2.5">
+              <div className="flex items-center gap-2">
+                <Wallet className="w-4 h-4 text-[#173b28] shrink-0" />
+                <span className="text-xs font-bold text-stone-900 uppercase tracking-wider">
+                  Payment Method
+                </span>
+              </div>
+
+              {/* Options for Cash and Mpesa */}
+              <div className="flex flex-col gap-2 pt-0.5">
+                {/* Mpesa Option */}
+                <label
+                  onClick={() => setPaymentMethod('mpesa')}
+                  className={`flex items-start gap-2.5 p-2.5 sm:p-3 rounded-xl border transition-all cursor-pointer select-none ${
+                    paymentMethod === 'mpesa'
+                      ? 'border-[#009A44] bg-[#009A44]/5 ring-1 ring-[#009A44]'
+                      : 'border-stone-200 bg-white hover:bg-stone-50 text-stone-700'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="mpesa"
+                    checked={paymentMethod === 'mpesa'}
+                    onChange={() => setPaymentMethod('mpesa')}
+                    className="w-4 h-4 mt-0.5 text-[#009A44] focus:ring-[#009A44] accent-[#009A44] cursor-pointer shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-xs sm:text-sm text-stone-900">
+                          M-Pesa
+                        </span>
+                        <span className="text-[10px] font-bold bg-[#009A44] text-white px-1.5 py-0.2 rounded-md uppercase tracking-wider">
+                          STK Push
+                        </span>
+                      </div>
+                      {paymentMethod === 'mpesa' && (
+                        <Check className="w-3.5 h-3.5 text-[#009A44] shrink-0" />
+                      )}
+                    </div>
+                    <p className="text-[11px] text-stone-600 mt-0.5 leading-snug">
+                      Instant STK push prompt to {phone || 'your phone'}. Enter PIN to confirm.
+                    </p>
+                  </div>
+                </label>
+
+                {/* Cash Option */}
+                <label
+                  onClick={() => setPaymentMethod('cash')}
+                  className={`flex items-start gap-2.5 p-2.5 sm:p-3 rounded-xl border transition-all cursor-pointer select-none ${
+                    paymentMethod === 'cash'
+                      ? 'border-[#173b28] bg-[#EBF5ED] ring-1 ring-[#173b28]'
+                      : 'border-stone-200 bg-white hover:bg-stone-50 text-stone-700'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="cash"
+                    checked={paymentMethod === 'cash'}
+                    onChange={() => setPaymentMethod('cash')}
+                    className="w-4 h-4 mt-0.5 text-[#173b28] focus:ring-[#173b28] accent-[#173b28] cursor-pointer shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-xs sm:text-sm text-stone-900">
+                          Cash
+                        </span>
+                        <span className="text-[10px] font-semibold bg-stone-200 text-stone-700 px-1.5 py-0.2 rounded-md">
+                          On Delivery
+                        </span>
+                      </div>
+                      {paymentMethod === 'cash' && (
+                        <Check className="w-3.5 h-3.5 text-[#173b28] shrink-0" />
+                      )}
+                    </div>
+                    <p className="text-[11px] text-stone-600 mt-0.5 leading-snug">
+                      Pay cash directly to the dispatch rider upon delivery.
+                    </p>
+                  </div>
+                </label>
+              </div>
+            </div>
           </div>
 
           {/* Interactive M-Pesa STK Push Simulation Overlay */}
@@ -492,12 +574,16 @@ export const CheckoutModal: React.FC = () => {
               {isProcessing ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Processing M-Pesa Handshake...</span>
+                  <span>
+                    {paymentMethod === 'mpesa' ? 'Processing M-Pesa Handshake...' : 'Confirming Cash Order...'}
+                  </span>
                 </>
               ) : (
                 <>
                   <span>
-                    Continue to Pay KES {totalPayable.toLocaleString()}
+                    {paymentMethod === 'mpesa'
+                      ? `Continue to Pay KES ${totalPayable.toLocaleString()}`
+                      : `Place Cash Order · KES ${totalPayable.toLocaleString()}`}
                   </span>
                   <ArrowRight className="w-4 h-4" />
                 </>

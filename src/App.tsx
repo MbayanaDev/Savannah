@@ -8,6 +8,13 @@ import { StoreProvider, useStore } from './context/StoreContext';
 import { Header } from './components/Header';
 import { Storefront } from './components/Storefront';
 import { AdminDashboard } from './components/Dashboard/AdminDashboard';
+import { AboutPage } from './components/pages/AboutPage';
+import { FaqsPage } from './components/pages/FaqsPage';
+import { PurposePage } from './components/pages/PurposePage';
+import { RefundsPage } from './components/pages/RefundsPage';
+import { PrivacyPage } from './components/pages/PrivacyPage';
+import { TermsPage } from './components/pages/TermsPage';
+import { ArcanaPage } from './components/pages/ArcanaPage';
 import { CartDrawer } from './components/CartDrawer';
 import { CheckoutModal } from './components/CheckoutModal';
 import { OrderConfirmationModal } from './components/OrderConfirmationModal';
@@ -26,9 +33,18 @@ const AppContent: React.FC = () => {
       {/* Top Bar adhering to 3-zone contract */}
       <Header />
 
-      {/* Main View: Storefront vs Merchant Operations Hub */}
+      {/* Main View: Storefront vs Merchant Operations Hub vs Dedicated Individual Pages */}
       <main className="flex-1">
-        {viewMode === 'store' ? <Storefront /> : <AdminDashboard />}
+        {viewMode === 'store' && <Storefront />}
+        {viewMode === 'admin' && <AdminDashboard />}
+        {viewMode === 'about' && <AboutPage />}
+        {viewMode === 'faqs' && <FaqsPage />}
+        {viewMode === 'purpose' && <PurposePage />}
+        {viewMode === 'refunds' && <RefundsPage />}
+        {viewMode === 'privacy' && <PrivacyPage />}
+        {viewMode === 'terms' && <TermsPage />}
+        {viewMode === 'arcana' && <ArcanaPage />}
+        {viewMode === 'blog' && <AboutPage />}
       </main>
 
       {/* Global Modals & Drawers */}
