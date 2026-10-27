@@ -20,14 +20,30 @@ import {
   MapPin,
   Flame,
   CheckCircle,
-  HelpCircle
+  HelpCircle,
+  Calendar,
+  Truck
 } from 'lucide-react';
+
+export interface CropOfftake {
+  crop: string;
+  percent: number;
+  fulfilled: number;
+  target: number;
+}
 
 export interface FeedBatchItem {
   type: 'traceability' | 'farmers' | 'green';
   product: string;
   sourcingRegion: string;
+  areasInRegion?: string;
+  predominantCrops?: string;
+  farmerCount?: string;
+  lastEventDate?: string;
   landId: string;
+  farmCode?: string;
+  certifications?: string[];
+  offtaking?: CropOfftake[];
   batchNumber: string;
   parity: string;
   image: string;
@@ -51,29 +67,43 @@ interface InitiativeLiveFeedProps {
   initiativeLabel: string;
 }
 
-const INITIATIVE_DETAILS = {
+export interface InitiativePoint {
+  label: string;
+  detail: string;
+  icon: LucideIcon;
+}
+
+interface InitiativeDetailConfig {
+  description: string;
+  points: InitiativePoint[];
+}
+
+const INITIATIVE_DETAILS: Record<'traceability' | 'farmers' | 'green', InitiativeDetailConfig> = {
   traceability: {
-    description: 'Cryptographic QR passports authenticate smallholder plot origins, dawn harvest timestamps, and independent residue testing for absolute dinner table trust.',
+    description: 'We are supporting farms to grow honest food by building capacity on Good Agricultural Practices and providing intentional market',
     points: [
-      { label: 'Batch Passports', detail: 'Instant farm-to-table origin proof' },
-      { label: 'Arcana Certified Farms', detail: '1,480+ partner smallholders audited & certified' },
-      { label: 'Synthetic Sprays', detail: 'Zero chemical pesticides or toxins' }
+      { label: 'Bio-chemicals', detail: 'Organic microbial & bio-pest protection', icon: Sprout },
+      { label: 'Pre-harvest interval', detail: 'Strict waiting period before safe picking', icon: Clock },
+      { label: 'Post-harvest handling', detail: 'Dawn hydro-cooling & certified sorting', icon: CheckCircle2 },
+      { label: 'Arcana audits', detail: 'Comprehensive GAP compliance & residue testing', icon: ShieldCheck }
     ]
   },
   farmers: {
-    description: 'Direct scale-to-mobile settlements transfer earnings within 24 hours via M-Pesa, ensuring 78–82% value retention directly in growers’ pockets.',
+    description: 'Happy farmers are knowledgeable farmers who are paid promptly and assured of markets. We aggregate our farmer groups and link them with valuable partners.',
     points: [
-      { label: 'Farmers Supported', detail: '1,480+ smallholder partners in Kiambu, Kinangop & Naivasha' },
-      { label: 'Farmer Satisfaction', detail: 'Audited smallholder loyalty (+88 NPS)' },
-      { label: 'Instant M-Pesa', detail: 'Direct digital scale settlement (24-Hr)' }
+      { label: '24 hour payment', detail: 'Instant digital scale-to-mobile settlement', icon: CheckCircle2 },
+      { label: 'Net Promoter Score survey', detail: 'Audited smallholder satisfaction (+88 NPS)', icon: HeartHandshake },
+      { label: 'Farmer training', detail: 'Agronomic capacity building & GAP practices', icon: Users },
+      { label: 'Collective crop calendars', detail: 'Synchronized planting and staggered harvest planning', icon: Calendar }
     ]
   },
   green: {
-    description: 'Rooftop solar generation and continuous LiFePO4 cold storage power our 100% zero-emission electric delivery fleet, eliminating delivery tailpipe carbon and urban air pollution.',
+    description: 'We purpose to have our fulfillment hub and last mile delivery powered by solar energy. Eliminating delivery tailpipe and urban air population.',
     points: [
-      { label: '% Deliveries as Green', detail: '100% electric cargo vans & bikes' },
-      { label: '% CO₂ Offset (Solar)', detail: '88% net cold-chain emissions eliminated' },
-      { label: 'Rooftop Solar Array', detail: '182,000 kWh clean power / yr (120 kWp)' }
+      { label: 'Last mile green deliveries', detail: '100% electric cargo vans & bikes', icon: CheckCircle2 },
+      { label: 'Tree planting CSR', detail: 'Indigenous highland tree nursery & border planting', icon: Sprout },
+      { label: 'Solar powered fulfillment hub', detail: '120 kWp solar hub & LiFePO4 storage array', icon: Building2 },
+      { label: '90%+ Logistics capacity utilisation', detail: 'Route optimization eliminating dead miles', icon: Truck }
     ]
   }
 };
@@ -138,6 +168,12 @@ export const InitiativeLiveFeed: React.FC<InitiativeLiveFeedProps> = ({
       product: 'Highland Sukuma Wiki & Baby Spinach',
       sourcingRegion: 'Limuru Highlands',
       landId: 'LM482A',
+      farmCode: 'ARC-LM482A/0326',
+      certifications: ['GlobalG.A.P. IFA v6', 'KOAN Organic', 'KEPHIS 0.00ppm'],
+      offtaking: [
+        { crop: 'Sukuma Wiki', percent: 92, fulfilled: 920, target: 1000 },
+        { crop: 'Baby Spinach', percent: 86, fulfilled: 430, target: 500 }
+      ],
       batchNumber: 'ARC-20261023-LM482A',
       parity: '79.2%',
       image: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&w=300&q=80',
@@ -149,6 +185,12 @@ export const InitiativeLiveFeed: React.FC<InitiativeLiveFeedProps> = ({
       product: 'Kinangop Sweet Nantes Carrots',
       sourcingRegion: 'Kinangop Plateau',
       landId: 'KG912B',
+      farmCode: 'ARC-KG912B/0418',
+      certifications: ['Bio-Char Organic', 'Living Soil GAP', 'Non-GMO Verified'],
+      offtaking: [
+        { crop: 'Nantes Carrots', percent: 88, fulfilled: 880, target: 1000 },
+        { crop: 'Baby Beetroots', percent: 95, fulfilled: 380, target: 400 }
+      ],
       batchNumber: 'ARC-20261023-KG912B',
       parity: '81.4%',
       image: 'https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?auto=format&fit=crop&w=300&q=80',
@@ -160,6 +202,12 @@ export const InitiativeLiveFeed: React.FC<InitiativeLiveFeedProps> = ({
       product: 'Heirloom Sweet Mint & Culinary Herbs',
       sourcingRegion: 'Naivasha Spring Basin',
       landId: 'NV302C',
+      farmCode: 'ARC-NV302C/0105',
+      certifications: ['Volcanic Spring Tested', 'Heavy-Metal Free', 'HCD Approved'],
+      offtaking: [
+        { crop: 'Sweet Mint & Herbs', percent: 94, fulfilled: 470, target: 500 },
+        { crop: 'Crisp Coriander', percent: 89, fulfilled: 356, target: 400 }
+      ],
       batchNumber: 'ARC-20261023-NV302C',
       parity: '80.0%',
       image: 'https://images.unsplash.com/photo-1608686207856-001b95cf60ca?auto=format&fit=crop&w=300&q=80',
@@ -171,6 +219,11 @@ export const InitiativeLiveFeed: React.FC<InitiativeLiveFeedProps> = ({
       product: 'Export-Grade Hass Avocados',
       sourcingRegion: 'Murang\'a Slopes',
       landId: 'MR708D',
+      farmCode: 'ARC-MR708D/0722',
+      certifications: ['Native Bee Sanctuary', 'GlobalG.A.P.', 'Zero Neonicotinoids'],
+      offtaking: [
+        { crop: 'Hass Avocados', percent: 96, fulfilled: 1920, target: 2000 }
+      ],
       batchNumber: 'ARC-20261022-MR708D',
       parity: '82.5%',
       image: 'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?auto=format&fit=crop&w=300&q=80',
@@ -182,6 +235,11 @@ export const InitiativeLiveFeed: React.FC<InitiativeLiveFeedProps> = ({
       product: 'Subukia Cluster Tomatoes',
       sourcingRegion: 'Subukia Escarpment',
       landId: 'SB503E',
+      farmCode: 'ARC-SB503E/0514',
+      certifications: ['Solar Hydro-Cooled', 'Push-Pull Bio-Shield', 'GAP Certified'],
+      offtaking: [
+        { crop: 'Cluster Tomatoes', percent: 90, fulfilled: 1350, target: 1500 }
+      ],
       batchNumber: 'ARC-20261023-SB503E',
       parity: '78.9%',
       image: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=300&q=80',
@@ -193,6 +251,11 @@ export const InitiativeLiveFeed: React.FC<InitiativeLiveFeedProps> = ({
       product: 'Nyandarua Golden Butter Potatoes',
       sourcingRegion: 'Ol Kalou Ridge',
       landId: 'OK815F',
+      farmCode: 'ARC-OK815F/0830',
+      certifications: ['Peat Loam Certified', 'Bluetooth Scale Verified', 'KOAN Partner'],
+      offtaking: [
+        { crop: 'Golden Butter Potatoes', percent: 91, fulfilled: 2275, target: 2500 }
+      ],
       batchNumber: 'ARC-20261023-OK815F',
       parity: '83.1%',
       image: 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?auto=format&fit=crop&w=300&q=80',
@@ -205,151 +268,175 @@ export const InitiativeLiveFeed: React.FC<InitiativeLiveFeedProps> = ({
   const farmerWelfareStats: FeedBatchItem[] = [
     {
       type: 'farmers',
-      product: 'Mama Beatrice Njeri',
-      sourcingRegion: 'Limuru Highlands',
+      product: 'Kiambu Smallholders Group',
+      sourcingRegion: 'Kiambu County',
+      areasInRegion: 'Limuru, Githunguri, Lari & Tigoni',
+      predominantCrops: 'Sukuma Wiki, Baby Spinach & Sweet Leeks',
+      farmerCount: '420 Farmers',
+      lastEventDate: 'Oct 26, 2026',
       landId: 'LM482A',
       batchNumber: 'FRM-2026-LM482A',
       parity: '79.2%',
-      image: 'https://images.unsplash.com/photo-1592417817098-8f3d69104a47?auto=format&fit=crop&w=300&q=80',
-      attributes: ['top 10% earner', '2 certifications', 'verified audits'],
+      image: '',
+      attributes: ['24-Hr M-Pesa Settlement', 'Bio-Input Capacity', 'GAP Certified'],
       detail: 'Lead Smallholder & Women Coop Founder · Direct scale-to-mobile settlement with zero broker deductions.'
     },
     {
       type: 'farmers',
-      product: 'Dennis Kiprono',
+      product: 'Kinangop Plateau Smallholders',
       sourcingRegion: 'Kinangop Plateau',
+      areasInRegion: 'Engineer, North Kinangop & Magumu',
+      predominantCrops: 'Nantes Carrots, Baby Beetroots & Cabbages',
+      farmerCount: '310 Farmers',
+      lastEventDate: 'Oct 25, 2026',
       landId: 'KG912B',
       batchNumber: 'FRM-2026-KG912B',
       parity: '81.4%',
-      image: 'https://images.unsplash.com/photo-1589923188900-85dae523342b?auto=format&fit=crop&w=300&q=80',
-      attributes: ['top 10% earner', '2 certifications', 'verified audits'],
+      image: '',
+      attributes: ['Living Soil Compost', 'No Middlemen', '81.4% Value Retained'],
       detail: 'Next-Gen Youth Agri-Preneur · Matched bio-soil input rebate and automated bokashi bio-reactor deployment.'
     },
     {
       type: 'farmers',
-      product: 'Lucy Wangari',
+      product: 'Naivasha Basin Farmers Union',
       sourcingRegion: 'Naivasha Spring Basin',
+      areasInRegion: 'South Lake, Moi Ndabi & Mai Mahiu',
+      predominantCrops: 'Sweet Mint, Fresh Coriander & Culinary Herbs',
+      farmerCount: '280 Farmers',
+      lastEventDate: 'Oct 24, 2026',
       landId: 'NV302C',
       batchNumber: 'FRM-2026-NV302C',
       parity: '80.0%',
-      image: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=300&q=80',
-      attributes: ['top 10% earner', '2 certifications', 'verified audits'],
+      image: '',
+      attributes: ['Volcanic Spring Tested', 'Women Lead Coop', 'Digital Scale Verified'],
       detail: 'Women Agro-Ecology Coop · Riparian catchment guardian preserving 14km of natural mountain springs.'
     },
     {
       type: 'farmers',
-      product: 'Mzee Peter Karanja',
-      sourcingRegion: 'Murang\'a Slopes',
+      product: 'Murang\'a Orchard Growers',
+      sourcingRegion: 'Murang\'a County',
+      areasInRegion: 'Kangema, Mathioya & Kigumo',
+      predominantCrops: 'Export Hass Avocados & Tree Tomatoes',
+      farmerCount: '340 Farmers',
+      lastEventDate: 'Oct 23, 2026',
       landId: 'MR708D',
       batchNumber: 'FRM-2026-MR708D',
       parity: '82.5%',
-      image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
-      attributes: ['top 10% earner', '2 certifications', 'verified audits'],
+      image: '',
+      attributes: ['Native Bee Sanctuary', 'Fair Floor Guaranteed', '82.5% Value Retained'],
       detail: 'Elder Agroforestry Guardian · 20 new native stingless beehives installed to restore highland wild pollinators.'
     },
     {
       type: 'farmers',
-      product: 'Faith Cherono',
+      product: 'Subukia Valley Farmers',
       sourcingRegion: 'Subukia Escarpment',
+      areasInRegion: 'Subukia Valley, Kabazi & Bahati',
+      predominantCrops: 'Cluster Tomatoes & Sweet Bell Peppers',
+      farmerCount: '190 Farmers',
+      lastEventDate: 'Oct 22, 2026',
       landId: 'SB503E',
       batchNumber: 'FRM-2026-SB503E',
       parity: '78.9%',
-      image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80',
-      attributes: ['top 10% earner', '2 certifications', 'verified audits'],
+      image: '',
+      attributes: ['Solar Hydro-Cooled', 'Push-Pull Bio-Shield', 'NPS +88 Audited'],
       detail: '60% water conservation yield · Push-pull organic bio-shield against stemborers and fall armyworm.'
     },
     {
       type: 'farmers',
-      product: 'Joseph Mwangi',
-      sourcingRegion: 'Ol Kalou Ridge',
+      product: 'Nyandarua Potato Growers',
+      sourcingRegion: 'Nyandarua Ridge',
+      areasInRegion: 'Ol Kalou, Shamata & Wanjohi',
+      predominantCrops: 'Golden Butter Potatoes & Highland Peas',
+      farmerCount: '260 Farmers',
+      lastEventDate: 'Oct 21, 2026',
       landId: 'OK815F',
       batchNumber: 'FRM-2026-OK815F',
       parity: '83.1%',
-      image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80',
-      attributes: ['top 10% earner', '2 certifications', 'verified audits'],
+      image: '',
+      attributes: ['Bluetooth Scale Weighed', 'Zero Rounding Losses', '83.1% Value Retained'],
       detail: 'Smallholder Association Chair · Instant digital receipting with zero arbitrary weight rounding.'
     }
   ];
 
-  // Content for Green Operations: Real-time green operations telemetry
+  // Content for Green Deliveries: Key Sustainability Initiatives & Commitments
   const greenOperationsLogs: FeedBatchItem[] = [
     {
       type: 'green',
-      product: 'Rooftop Solar Array Generation',
-      sourcingRegion: 'Nairobi Central Micro-Hub',
-      landId: 'SLR120A',
-      batchNumber: 'OPS-2026-SLR120A',
-      metric: '182,000 kWh/yr Clean',
-      greenType: 'Environment',
-      parity: '100%',
-      image: 'https://images.unsplash.com/photo-1509391365360-2e959784a276?auto=format&fit=crop&w=300&q=80',
-      attributes: ['74.2 kW Live Output', '100% Self-Sufficient'],
-      detail: '120 kWp rooftop solar photovoltaic array providing 100% self-sufficient operations power for the fulfillment hub.'
-    },
-    {
-      type: 'green',
-      product: 'LiFePO4 Cold Storage Energy Bank',
-      sourcingRegion: 'Kiambu Cold Storage Facility',
-      landId: 'ESS240B',
-      batchNumber: 'OPS-2026-ESS240B',
-      metric: '240 kWh Battery Bank',
-      greenType: 'Operations',
-      parity: '94%',
-      image: 'https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?auto=format&fit=crop&w=300&q=80',
-      attributes: ['Continuous Off-Grid', '4.0°C Walk-in Chiller'],
-      detail: '240 kWh LiFePO4 battery storage bank maintaining unbroken sub-4°C cooling without diesel backup generator emissions.'
-    },
-    {
-      type: 'green',
-      product: 'Electric Cargo Bike #04 (Kilimani Route)',
-      sourcingRegion: 'Kilimani Micro-Depot',
-      landId: 'EVB004C',
-      batchNumber: 'OPS-2026-EVB004C',
-      metric: '0.0g Tailpipe CO₂',
-      greenType: 'Logistics',
-      parity: '100%',
-      image: 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=300&q=80',
-      attributes: ['8 Drops Dispatched', 'Solar Battery Swapped'],
-      detail: '8 customer drops complete · Zero urban air pollution on Nairobi residential avenues via rapid battery swap station.'
-    },
-    {
-      type: 'green',
-      product: 'Electric Delivery Van #02 (Karen Route)',
-      sourcingRegion: 'Karen Logistic Hub',
-      landId: 'EVV002D',
-      batchNumber: 'OPS-2026-EVV002D',
+      product: 'Last Mile Green Deliveries',
+      sourcingRegion: 'Nairobi Metropolitan & Residential Corridors',
+      landId: 'INIT-GRN-01',
+      batchNumber: 'INIT-GRN-01',
       metric: '100% Zero-Emission Fleet',
       greenType: 'Logistics',
       parity: '100%',
-      image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=300&q=80',
-      attributes: ['Zero Engine Noise', '14 Drops Dispatched'],
-      detail: '100% zero-emission electric cargo vehicle carrying cold-insulated returnable crates across Southwest Nairobi.'
+      image: 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=400&q=80',
+      attributes: ['Electric Cargo Vans', 'Solar Swappable Batteries', 'Zero Tailpipe CO₂'],
+      detail: 'Operating dedicated 100% electric cargo vans and e-bikes for whisper-quiet, zero-emission last mile deliveries across urban residential routes.'
     },
     {
       type: 'green',
-      product: 'Solar Hydro-Cooling Rapid Chiller',
-      sourcingRegion: 'Limuru Harvest Intake Point',
-      landId: 'HDC010E',
-      batchNumber: 'OPS-2026-HDC010E',
-      metric: '35m Field-to-Chill',
-      greenType: 'Operations',
-      parity: '98%',
-      image: 'https://images.unsplash.com/photo-1584992236310-6edddc08acff?auto=format&fit=crop&w=300&q=80',
-      attributes: ['4.0°C Core Temp', 'Solar Direct Drive'],
-      detail: 'Solar hydro-cooler locks in crispness, vitamins, and shelf life within 35 minutes of dawn highland harvest.'
-    },
-    {
-      type: 'green',
-      product: 'Zero-Waste Returnable Crate Loop',
-      sourcingRegion: 'Central Sanitization Wash Station',
-      landId: 'CRT142F',
-      batchNumber: 'OPS-2026-CRT142F',
-      metric: '142 Reusable Crates',
+      product: 'Solar Powered Fulfillment Hub',
+      sourcingRegion: 'Central Aggregation & Cold-Chain Depot',
+      landId: 'INIT-GRN-02',
+      batchNumber: 'INIT-GRN-02',
+      metric: '182,000 kWh/yr Clean Solar',
       greenType: 'Environment',
-      parity: '94%',
-      image: 'https://images.unsplash.com/photo-1610557892470-55d9e80c0bce?auto=format&fit=crop&w=300&q=80',
-      attributes: ['Banana-Fiber Liners', 'Zero Single-Use Plastic'],
-      detail: '100% reusable crates and biodegradable unbleached plant liners eliminating single-use plastic waste from the food chain.'
+      parity: '100%',
+      image: 'https://images.unsplash.com/photo-1509391365360-2e959784a276?auto=format&fit=crop&w=400&q=80',
+      attributes: ['120 kWp Solar Array', '240 kWh LiFePO4 Bank', '100% Off-Grid Chilling'],
+      detail: 'Rooftop photovoltaic generation and LiFePO4 battery array powering uncompromised sub-4°C produce cooling without fossil-fuel backup generators.'
+    },
+    {
+      type: 'green',
+      product: '90%+ Logistics Capacity Utilisation',
+      sourcingRegion: 'Smart Route Scheduling & Load Bundling',
+      landId: 'INIT-GRN-03',
+      batchNumber: 'INIT-GRN-03',
+      metric: '90%+ Route Fill-Rate',
+      greenType: 'Logistics',
+      parity: '92%',
+      image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=400&q=80',
+      attributes: ['Zero Empty Dead Miles', 'Automated Load Pooling', 'Traffic Congestion Relief'],
+      detail: 'Intelligent route consolidation and high-density drop clustering to eliminate empty mileage, reduce congestion, and lower delivery energy intensity.'
+    },
+    {
+      type: 'green',
+      product: 'Tree Planting CSR & Carbon Sinks',
+      sourcingRegion: 'Highland Agroforestry & Water Catchments',
+      landId: 'INIT-GRN-04',
+      batchNumber: 'INIT-GRN-04',
+      metric: '12,500 Seedlings / Year',
+      greenType: 'Environment',
+      parity: '100%',
+      image: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=400&q=80',
+      attributes: ['Indigenous Tree Nurseries', 'Windbreak Corridors', 'Riparian Protection'],
+      detail: 'Collaborating with smallholder partner groups to plant indigenous trees, restore vulnerable riparian catchments, and develop durable carbon sinks.'
+    },
+    {
+      type: 'green',
+      product: 'Zero Single-Use Plastic Packaging',
+      sourcingRegion: 'Closed-Loop Food Packaging & Crating',
+      landId: 'INIT-GRN-05',
+      batchNumber: 'INIT-GRN-05',
+      metric: '100% Plastic-Free Outer',
+      greenType: 'Operations',
+      parity: '96%',
+      image: 'https://images.unsplash.com/photo-1610557892470-55d9e80c0bce?auto=format&fit=crop&w=400&q=80',
+      attributes: ['Sanitized Reusable Crates', 'Banana-Fiber Liners', 'Circular Distribution'],
+      detail: 'Sanitized returnable produce crates and biodegradable unbleached banana-fiber liners that eliminate single-use polyethylene packaging.'
+    },
+    {
+      type: 'green',
+      product: 'Urban Air Pollution Abatement',
+      sourcingRegion: 'Residential Neighborhood Air Quality',
+      landId: 'INIT-GRN-06',
+      batchNumber: 'INIT-GRN-06',
+      metric: '0.0 ppm PM2.5 / Soot',
+      greenType: 'Environment',
+      parity: '100%',
+      image: 'https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?auto=format&fit=crop&w=400&q=80',
+      attributes: ['Zero Diesel Particulates', 'Quiet Electric Motors', 'Healthy Neighborhoods'],
+      detail: 'Actively eliminating toxic diesel soot and acoustic disturbance along Nairobi residential streets through clean, solar-charged last mile mobility.'
     }
   ];
 
@@ -358,17 +445,7 @@ export const InitiativeLiveFeed: React.FC<InitiativeLiveFeedProps> = ({
       {items.concat(items).map((item, idx) => {
         // Collect all pills for continuous horizontal autoscroll
         const pillItems = [
-          ...(item.type === 'green' && item.greenType ? [
-            {
-              key: 'type',
-              label: item.greenType,
-              style: item.greenType === 'Environment'
-                ? 'bg-emerald-50 text-emerald-900 border-emerald-200 font-mono font-bold'
-                : item.greenType === 'Logistics'
-                ? 'bg-sky-50 text-sky-900 border-sky-200 font-mono font-bold'
-                : 'bg-amber-50 text-amber-900 border-amber-200 font-mono font-bold'
-            }
-          ] : [
+          ...(item.type === 'green' ? [] : [
             {
               key: 'land',
               label: item.landId,
@@ -398,6 +475,252 @@ export const InitiativeLiveFeed: React.FC<InitiativeLiveFeedProps> = ({
           }))
         ];
 
+        if (item.type === 'traceability') {
+          return (
+            <div 
+              key={`${item.batchNumber}-${idx}`}
+              className="bg-white rounded-2xl p-2.5 sm:p-3.5 border border-stone-200/80 shadow-2xs hover:border-emerald-400 transition-colors flex flex-col gap-2.5 text-xs w-full min-w-0"
+            >
+              {/* Header spanning from the top of the image */}
+              <div className="font-display font-extrabold text-stone-900 text-xs sm:text-[13.5px] leading-tight truncate w-full">
+                Farm/Plot: {item.farmCode || `ARC-${item.landId}/0326`}
+              </div>
+
+              {/* Middle Section: Left image + Right details */}
+              <div className="flex items-start gap-3 sm:gap-4 w-full">
+                {/* Farm Image */}
+                <img 
+                  src={item.image} 
+                  alt={item.product} 
+                  className="w-20 h-20 sm:w-22 sm:h-22 md:w-24 md:h-24 rounded-2xl object-cover shrink-0 border border-stone-200/90 shadow-2xs"
+                  loading="lazy"
+                />
+
+                {/* Right column: Sourcing region above offtaking performance, followed by performance bars */}
+                <div className="flex flex-col min-w-0 flex-1 justify-center space-y-1 overflow-hidden">
+                  {/* Sourcing region above Offtaking Performance */}
+                  <div className="text-[10.5px] sm:text-[11px] font-sans font-semibold text-stone-700 truncate leading-snug">
+                    {item.sourcingRegion}
+                  </div>
+
+                  <div className="text-[9px] sm:text-[9.5px] font-mono uppercase tracking-wider text-stone-400 font-bold leading-none">
+                    offtaking performance
+                  </div>
+
+                  <div className="space-y-1.5 pt-0.5">
+                    {(item.offtaking || [
+                      { crop: item.product, percent: 88, fulfilled: 880, target: 1000 }
+                    ]).map((crop, cIdx) => (
+                      <div key={cIdx} className="space-y-0.5">
+                        <div className="flex items-center justify-between text-[10px] sm:text-[10.5px] leading-tight">
+                          <span className="flex items-center gap-1 font-medium text-stone-700 truncate">
+                            <Sprout className="w-3 h-3 text-emerald-600 shrink-0" />
+                            <span className="truncate">{crop.crop}</span>
+                          </span>
+                          <span className="font-mono font-bold text-emerald-900 text-[9px] sm:text-[9.5px] tabular-nums shrink-0 ml-1.5">
+                            {crop.percent}% ({crop.fulfilled}/{crop.target} kg)
+                          </span>
+                        </div>
+                        <div className="w-full bg-stone-100 rounded-full h-1.5 overflow-hidden border border-stone-200/60">
+                          <div 
+                            className="bg-emerald-600 h-full rounded-full transition-all duration-500" 
+                            style={{ width: `${crop.percent}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Section: Pill tags starting from below the image and spanning the whole length, with view CTA */}
+              <div className="w-full flex items-center justify-between gap-1.5 pt-1 border-t border-stone-100">
+                {/* The pill tags starting from below the image and spanning the whole length */}
+                <div className="flex flex-wrap items-center gap-1 min-w-0 flex-1">
+                  {(item.certifications || item.attributes).map((cert, cIdx) => (
+                    <span 
+                      key={cIdx}
+                      className="text-[7px] sm:text-[7.5px] font-mono font-semibold px-1.5 py-[1.5px] rounded-full border border-emerald-200/80 bg-emerald-50/90 text-emerald-900 whitespace-nowrap leading-none tracking-tight shadow-2xs"
+                    >
+                      {cert}
+                    </span>
+                  ))}
+                </div>
+
+                {/* Eventually: "view" CTA as it is presently */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setJoinRole('consumer');
+                    setJoinSubmitted(false);
+                    if (item.product) {
+                      setConsumerBasketItems(prev => {
+                        if (prev.includes(item.product)) return prev;
+                        if (prev.length >= 4) {
+                          return [...prev.slice(0, 3), item.product];
+                        }
+                        return [...prev, item.product];
+                      });
+                    }
+                    setShowJoinModal(true);
+                  }}
+                  className="inline-flex items-center gap-0.5 text-[7.5px] sm:text-[8px] font-sans font-extrabold text-stone-900 hover:text-emerald-950 bg-amber-400 hover:bg-amber-300 border border-amber-500/70 px-2 py-[2.5px] rounded-md transition-all leading-none cursor-pointer shrink-0 shadow-2xs group"
+                >
+                  <span>view</span>
+                  <ChevronRight className="w-2.5 h-2.5 text-stone-900 group-hover:translate-x-0.5 transition-transform" />
+                </button>
+              </div>
+            </div>
+          );
+        }
+
+        if (item.type === 'farmers') {
+          return (
+            <div 
+              key={`${item.batchNumber}-${idx}`}
+              className="bg-white rounded-2xl p-3 sm:p-3.5 border border-stone-200/80 shadow-2xs hover:border-emerald-400 transition-colors flex flex-col gap-1.5 text-xs w-full min-w-0"
+            >
+              {/* Header row: Region: {Sourcing Region} */}
+              <div className="font-display font-extrabold text-stone-900 text-xs sm:text-[13.5px] leading-tight truncate w-full">
+                Region: {item.sourcingRegion}
+              </div>
+
+              {/* Text of areas in the region as independent text */}
+              {item.areasInRegion && (
+                <div className="text-[10.5px] sm:text-[11px] font-sans text-stone-600 leading-snug">
+                  <span className="font-bold text-stone-800">Areas: </span>
+                  <span>{item.areasInRegion}</span>
+                </div>
+              )}
+
+              {/* Predominant crops as independent text */}
+              <div className="text-[10.5px] sm:text-[11px] font-sans text-stone-600 leading-snug">
+                <span className="font-bold text-stone-800">Predominant crops: </span>
+                <span>{item.predominantCrops || item.product}</span>
+              </div>
+
+              {/* Number of farmers as independent text */}
+              <div className="text-[10.5px] sm:text-[11px] font-sans text-stone-600 leading-snug">
+                <span className="font-bold text-stone-800">Number of farmers: </span>
+                <span className="font-semibold text-emerald-900">{item.farmerCount || '420 Farmers'}</span>
+              </div>
+
+              {/* Tags right after the number of farmers */}
+              <div className="flex flex-wrap items-center gap-1 min-w-0 pt-0.5">
+                {item.attributes.map((attr, aIdx) => (
+                  <span 
+                    key={aIdx}
+                    className="text-[7px] sm:text-[7.5px] font-mono font-semibold px-1.5 py-[1.5px] rounded-full border border-emerald-200/80 bg-emerald-50/90 text-emerald-900 whitespace-nowrap leading-none tracking-tight shadow-2xs"
+                  >
+                    {attr}
+                  </span>
+                ))}
+              </div>
+
+              {/* Bottom Row: Last event date on left + View CTA on right */}
+              <div className="w-full flex items-center justify-between gap-2 pt-1 border-t border-stone-100">
+                {item.lastEventDate ? (
+                  <span className="text-[9.5px] sm:text-[10px] font-mono text-stone-400 font-medium">
+                    Last event: {item.lastEventDate}
+                  </span>
+                ) : (
+                  <span />
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setJoinRole('farmer');
+                    setJoinSubmitted(false);
+                    setShowJoinModal(true);
+                  }}
+                  className="inline-flex items-center gap-0.5 text-[7.5px] sm:text-[8px] font-sans font-extrabold text-stone-900 hover:text-emerald-950 bg-amber-400 hover:bg-amber-300 border border-amber-500/70 px-2 py-[2.5px] rounded-md transition-all leading-none cursor-pointer shrink-0 shadow-2xs group"
+                >
+                  <span>view</span>
+                  <ChevronRight className="w-2.5 h-2.5 text-stone-900 group-hover:translate-x-0.5 transition-transform" />
+                </button>
+              </div>
+            </div>
+          );
+        }
+
+        if (item.type === 'green') {
+          return (
+            <div 
+              key={`${item.batchNumber}-${idx}`}
+              className="bg-white rounded-2xl p-2.5 sm:p-3.5 border border-stone-200/80 shadow-2xs hover:border-emerald-400 transition-colors flex flex-col gap-2 sm:gap-2.5 text-xs w-full min-w-0"
+            >
+              {/* Header: Initiative Name */}
+              <div className="font-display font-extrabold text-stone-900 text-xs sm:text-[13.5px] leading-tight truncate w-full">
+                Initiative: {item.product}
+              </div>
+
+              {/* Middle Section: Left Image + Right Details */}
+              <div className="flex items-start gap-3 sm:gap-4 w-full">
+                {item.image && (
+                  <img 
+                    src={item.image} 
+                    alt={item.product} 
+                    className="w-20 h-20 sm:w-22 sm:h-22 md:w-24 md:h-24 rounded-2xl object-cover shrink-0 border border-stone-200/90 shadow-2xs"
+                    loading="lazy"
+                  />
+                )}
+
+                <div className="flex flex-col min-w-0 flex-1 justify-center space-y-1 overflow-hidden">
+                  {/* Scope / Coverage */}
+                  <div className="text-[10.5px] sm:text-[11px] font-sans font-semibold text-stone-700 truncate leading-snug">
+                    Scope: {item.sourcingRegion}
+                  </div>
+
+                  {/* Target Metric */}
+                  {item.metric && (
+                    <div className="flex items-center gap-1.5 text-[9.5px] sm:text-[10px] font-mono font-bold text-emerald-900 leading-tight">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0" />
+                      <span className="text-stone-400 font-normal">Target:</span>
+                      <span className="truncate">{item.metric}</span>
+                    </div>
+                  )}
+
+                  {/* Initiative Description / Commitment */}
+                  {item.detail && (
+                    <p className="text-[10px] sm:text-[10.5px] font-sans text-stone-600 line-clamp-2 leading-relaxed">
+                      {item.detail}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Bottom Section: Tags across the bottom + View CTA */}
+              <div className="w-full flex items-center justify-between gap-1.5 pt-1 border-t border-stone-100">
+                <div className="flex flex-wrap items-center gap-1 min-w-0 flex-1">
+                  {item.attributes.map((attr, aIdx) => (
+                    <span 
+                      key={aIdx}
+                      className="text-[7px] sm:text-[7.5px] font-mono font-semibold px-1.5 py-[1.5px] rounded-full border border-emerald-200/80 bg-emerald-50/90 text-emerald-900 whitespace-nowrap leading-none tracking-tight shadow-2xs"
+                    >
+                      {attr}
+                    </span>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setJoinRole('partner');
+                    setPartnerProposal(`Interested in collaborating on ${item.product} (${item.metric || 'Green Initiative'})`);
+                    setJoinSubmitted(false);
+                    setShowJoinModal(true);
+                  }}
+                  className="inline-flex items-center gap-0.5 text-[7.5px] sm:text-[8px] font-sans font-extrabold text-stone-900 hover:text-emerald-950 bg-amber-400 hover:bg-amber-300 border border-amber-500/70 px-2 py-[2.5px] rounded-md transition-all leading-none cursor-pointer shrink-0 shadow-2xs group"
+                >
+                  <span>view</span>
+                  <ChevronRight className="w-2.5 h-2.5 text-stone-900 group-hover:translate-x-0.5 transition-transform" />
+                </button>
+              </div>
+            </div>
+          );
+        }
+
         return (
           <div 
             key={`${item.batchNumber}-${idx}`}
@@ -411,28 +734,17 @@ export const InitiativeLiveFeed: React.FC<InitiativeLiveFeedProps> = ({
               loading="lazy"
             />
 
-            {/* Followed with a column */}
             <div className="flex flex-col min-w-0 flex-1 justify-center space-y-1.5 overflow-hidden py-0.5">
               {/* Product / Entity Header */}
               <div className="font-display font-extrabold text-stone-900 text-xs sm:text-[13.5px] leading-tight truncate">
                 {item.product}
               </div>
 
-              {/* Below it: For Green Delivery events replace batches with a metric and to the right the type (operations, logistics, environment) */}
-              {item.type === 'green' && item.metric && item.greenType ? (
+              {/* Below it: For Green Delivery replace batches with metric */}
+              {item.type === 'green' && item.metric ? (
                 <div className="flex items-center gap-1.5 text-[10.5px] sm:text-[11px] leading-tight truncate">
                   <span className="font-mono font-bold text-[#173b28] tracking-tight shrink-0">
                     {item.metric}
-                  </span>
-                  <span className="text-stone-300 font-normal">·</span>
-                  <span className={`px-1.5 py-[1px] rounded text-[8.5px] font-mono uppercase font-bold tracking-wider shrink-0 border ${
-                    item.greenType === 'Environment'
-                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                      : item.greenType === 'Logistics'
-                      ? 'bg-sky-50 text-sky-800 border-sky-200'
-                      : 'bg-amber-50 text-amber-900 border-amber-200'
-                  }`}>
-                    {item.greenType}
                   </span>
                   <span className="text-stone-300 font-normal">·</span>
                   <span className="font-semibold text-emerald-900 truncate">
@@ -453,7 +765,6 @@ export const InitiativeLiveFeed: React.FC<InitiativeLiveFeedProps> = ({
 
               {/* Horizontal Autoscrolling Pills Container */}
               <div className="w-full overflow-hidden relative py-0.5">
-                {/* Subtle edge fade gradients */}
                 <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-2.5 bg-gradient-to-r from-white to-transparent z-10" />
                 <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-2.5 bg-gradient-to-l from-white to-transparent z-10" />
 
@@ -476,15 +787,6 @@ export const InitiativeLiveFeed: React.FC<InitiativeLiveFeedProps> = ({
                   onClick={() => {
                     setJoinRole('consumer');
                     setJoinSubmitted(false);
-                    if (item.type === 'traceability' && item.product) {
-                      setConsumerBasketItems(prev => {
-                        if (prev.includes(item.product)) return prev;
-                        if (prev.length >= 4) {
-                          return [...prev.slice(0, 3), item.product];
-                        }
-                        return [...prev, item.product];
-                      });
-                    }
                     setShowJoinModal(true);
                   }}
                   className="inline-flex items-center gap-0.5 text-[7.5px] sm:text-[8px] font-sans font-extrabold text-stone-900 hover:text-emerald-950 bg-amber-400 hover:bg-amber-300 border border-amber-500/70 px-2 py-[2.5px] rounded-md transition-all leading-none cursor-pointer shrink-0 shadow-2xs group"
@@ -503,14 +805,14 @@ export const InitiativeLiveFeed: React.FC<InitiativeLiveFeedProps> = ({
   return (
     <div className="w-full max-w-full bg-white rounded-2xl border border-stone-200/90 shadow-2xs overflow-hidden flex flex-col">
       {/* Stream Header */}
-      <div className="p-2.5 sm:p-3.5 bg-stone-50/90 border-b border-stone-200/90 flex items-center justify-between gap-1.5 sm:gap-2">
+      <div className="p-2.5 sm:p-3 bg-stone-50/90 border-b border-stone-200/90 flex items-center justify-between gap-1.5 sm:gap-2">
         <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
           <span className="relative flex h-2 w-2 shrink-0">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600" />
           </span>
           <span className="text-xs sm:text-[13px] font-display font-extrabold text-stone-900 tracking-tight truncate">
-            {initiativeLabel} Events
+            {initiativeLabel} {activeTab === 'green' ? 'Initiatives' : activeTab === 'farmers' ? 'Records' : 'Events'}
           </span>
         </div>
 
@@ -518,12 +820,12 @@ export const InitiativeLiveFeed: React.FC<InitiativeLiveFeedProps> = ({
         <button
           type="button"
           onClick={() => setShowDetails(prev => !prev)}
-          className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-1 rounded-lg hover:bg-stone-200/70 text-stone-600 hover:text-stone-900 transition-all cursor-pointer group shrink-0"
-          title={showDetails ? "Hide details" : "Show details"}
+          className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-0.5 rounded-lg hover:bg-stone-200/70 text-stone-600 hover:text-stone-900 transition-all cursor-pointer group shrink-0"
+          title={showDetails ? "Collapse details" : "Expand details"}
           aria-expanded={showDetails}
         >
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-          <span className="text-[10px] sm:text-[11px] font-mono text-stone-500 group-hover:text-stone-800 whitespace-nowrap">
+          <span className="text-[10px] sm:text-[10.5px] font-mono text-stone-500 group-hover:text-stone-800 whitespace-nowrap">
             updated 2m ago
           </span>
           <ChevronDown 
@@ -534,23 +836,38 @@ export const InitiativeLiveFeed: React.FC<InitiativeLiveFeedProps> = ({
         </button>
       </div>
 
-      {/* Accordion Details Dropdown */}
+      {/* Accordion / Collapsible Container: Click chevron down to collapse or show */}
       {showDetails && (
-        <div className="bg-emerald-50/60 border-b border-emerald-100/90 p-3 sm:p-4 text-xs space-y-2.5 animate-in fade-in slide-in-from-top-1 duration-200">
-          <p className="text-stone-700 leading-relaxed font-sans text-xs sm:text-[12px]">
+        <div className="bg-emerald-50/40 border-b border-stone-200/90 p-3 sm:p-3.5 space-y-2.5 animate-in fade-in slide-in-from-top-1 duration-200">
+          {/* Text description */}
+          <p className="text-[10.5px] sm:text-[11px] text-stone-700 leading-snug font-sans">
             {INITIATIVE_DETAILS[activeTab].description}
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-emerald-900/10 text-[11px]">
-            {INITIATIVE_DETAILS[activeTab].points.map((p, idx) => (
-              <div key={idx} className="flex items-start gap-1.5 min-w-0">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 mt-1.5 shrink-0" />
-                <div className="min-w-0">
-                  <span className="font-bold text-stone-900">{p.label}: </span>
-                  <span className="text-stone-600">{p.detail}</span>
-                </div>
-              </div>
-            ))}
+          {/* Interventions Section Header */}
+          <div className="pt-1.5 border-t border-emerald-900/10 space-y-1.5">
+            <div className="text-[9.5px] sm:text-[10px] font-mono uppercase tracking-wider text-emerald-900 font-bold flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+              <span>interventions</span>
+            </div>
+
+            {/* 2-column grid showing the interventions with 2 properly aligned per row */}
+            <div className="grid grid-cols-2 gap-x-2 sm:gap-x-3 gap-y-1.5 py-0.5">
+              {INITIATIVE_DETAILS[activeTab].points.map((p, idx) => {
+                const IconComponent = p.icon;
+                return (
+                  <div 
+                    key={idx} 
+                    className="flex items-center gap-1.5 min-w-0"
+                  >
+                    <IconComponent className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                    <span className="font-display font-bold text-stone-800 text-[9.5px] sm:text-[10.5px] leading-snug break-words">
+                      {p.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
@@ -578,8 +895,7 @@ export const InitiativeLiveFeed: React.FC<InitiativeLiveFeedProps> = ({
 
       {/* Footer autoscroll action row - compact in one row with text wrapping and leading icon */}
       <div className="px-3 py-2 sm:px-3.5 sm:py-2.5 bg-stone-50 border-t border-stone-200/90 flex items-center justify-between gap-3 min-w-0">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-700 shrink-0" />
+        <div className="min-w-0 flex-1">
           <p className="text-[11px] sm:text-xs font-semibold text-stone-800 leading-snug">
             Join Savanna Arcana and help us create more honest food
           </p>

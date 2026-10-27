@@ -16,12 +16,11 @@ import {
   BatteryCharging,
   QrCode,
   ThumbsUp,
-  Target,
-  Compass,
   TrendingUp
 } from 'lucide-react';
 import { PageLayout } from './PageLayout';
 import { useStore } from '../../context/StoreContext';
+import { VisionMissionCarousel } from './arcana/VisionMissionCarousel';
 import { CertificationsThreadCarousel } from './arcana/CertificationsThreadCarousel';
 import { InitiativeLiveFeed } from './arcana/InitiativeLiveFeed';
 
@@ -30,56 +29,38 @@ export const ArcanaPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'traceability' | 'farmers' | 'green'>('traceability');
 
   return (
-    <PageLayout
-      title="Savannah Arcana"
-      subtitle='Help us give you honest food. "Savannah Arcana" is our initiative to co-create with our farmers and customers more sustainable and traceable value chains.'
-      currentPage="Savannah Arcana"
-    >
-      <div className="space-y-10 animate-in fade-in duration-200">
-        {/* Section 1: MISSION and VISION Statements (as text without containers) */}
-        <section id="arcana-mission-vision" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
-            {/* Mission Statement */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-3.5">
-                <div className="w-11 h-11 rounded-xl bg-[#173b28] text-white flex items-center justify-center shadow-xs shrink-0">
-                  <Target className="w-5 h-5 text-amber-300" />
-                </div>
-                <div>
-                  <span className="text-[11px] font-mono uppercase tracking-widest text-emerald-800 font-extrabold block">
-                    FOUNDATIONAL MANDATE
-                  </span>
-                  <h4 className="font-display font-extrabold text-xl sm:text-2xl text-stone-900 tracking-tight leading-tight">
-                    Our Mission
-                  </h4>
-                </div>
-              </div>
+    <PageLayout currentPage="Savannah Arcana">
+      <div className="space-y-6 sm:space-y-7 animate-in fade-in duration-200 -mt-2 sm:-mt-3">
+        {/* Section 1: Compact Vision & Mission Carousel in Italics (10000ms transition, hover/hold pause) */}
+        <section id="arcana-mission-vision" className="pb-0">
+          <VisionMissionCarousel />
+        </section>
 
-              <p className="text-stone-700 text-sm sm:text-base leading-relaxed">
-                To radically dignify Kenya&apos;s smallholder farmers with equitable 24-hour settlements, eliminate agricultural chemical toxins through bio-ecological soil stewardship, and power Africa&apos;s cleanest farm-to-table cold chain using 100% renewable solar energy.
-              </p>
-            </div>
+        {/* Section 2: Header Image & Savannah Arcana Header */}
+        <section className="space-y-2.5 pt-0">
+          <div>
+            <h3 className="font-display font-extrabold text-xl sm:text-2xl md:text-3xl text-stone-900 tracking-tight">
+              How we do it
+            </h3>
+          </div>
 
-            {/* Vision Statement (Left-aligned text to the right of leading icon) */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-3.5">
-                <div className="w-11 h-11 rounded-xl bg-amber-500 text-stone-950 flex items-center justify-center shadow-xs shrink-0">
-                  <Compass className="w-5 h-5 text-stone-950" />
-                </div>
-                <div>
-                  <span className="text-[11px] font-mono uppercase tracking-widest text-amber-800 font-extrabold block">
-                    LONG-TERM ASPIRATION
-                  </span>
-                  <h4 className="font-display font-extrabold text-xl sm:text-2xl text-stone-900 tracking-tight leading-tight">
-                    Our Vision
-                  </h4>
-                </div>
-              </div>
+          <div className="relative w-full h-44 sm:h-56 md:h-64 rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs border border-stone-200/80 bg-stone-100 mb-2">
+            <img
+              src="https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=1600&q=80"
+              alt="Savannah Arcana - Co-creating honest food and sustainable value chains"
+              className="w-full h-full object-cover"
+              loading="eager"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent pointer-events-none" />
+          </div>
 
-              <p className="text-stone-700 text-sm sm:text-base leading-relaxed">
-                A sovereign, regenerative Kenya where every meal honors the earth and uplifts the grower—creating an unbroken circle of consumer trust, biological abundance, youth empowerment, and zero-emission delivery from highland soil to city tables.
-              </p>
-            </div>
+          <div className="text-center space-y-1.5 pb-1">
+            <h2 className="font-display font-black text-xl sm:text-3xl text-stone-900 tracking-tight">
+              Savannah Arcana
+            </h2>
+            <p className="text-xs sm:text-sm text-stone-600 max-w-2xl mx-auto leading-relaxed">
+              Co-creating honest food with our customers and farmers to build fairer, sustainable, and traceable value chains for all.
+            </p>
           </div>
         </section>
 
@@ -192,15 +173,21 @@ export const ArcanaPage: React.FC = () => {
             const currentInitiative = INITIATIVE_CONFIGS.find(c => c.id === activeTab) || INITIATIVE_CONFIGS[0];
 
             return (
-              <div className="flex flex-col md:flex-row gap-3 sm:gap-4 items-start">
-                {/* Column to the left with minimalist, compact initiative CTAs with inline metrics */}
-                <div className="w-full md:w-[390px] lg:w-[420px] shrink-0 flex flex-col space-y-1.5">
-                  <div className="text-[10.5px] font-mono uppercase tracking-widest text-emerald-800 font-bold px-1 mb-0.5 flex items-center justify-between">
+              <div className="space-y-3">
+                {/* Initiatives Section Header */}
+                <div className="px-0.5">
+                  <h3 className="font-display font-extrabold text-xl sm:text-2xl md:text-3xl text-stone-900 tracking-tight flex items-baseline gap-2">
                     <span>Initiatives</span>
-                    <span className="text-[9.5px] text-stone-400 font-normal">Select focus</span>
-                  </div>
+                    <span className="text-[11px] sm:text-xs md:text-sm font-sans font-medium text-stone-500 tracking-normal">
+                      (Demo)
+                    </span>
+                  </h3>
+                </div>
 
-                  <div className="flex flex-col gap-2 sm:gap-2.5" role="tablist" aria-label="Initiative Navigation">
+                <div className="flex flex-col md:flex-row gap-3 sm:gap-4 items-start">
+                  {/* Column to the left with minimalist, compact initiative CTAs with inline metrics */}
+                  <div className="w-full md:w-[390px] lg:w-[420px] shrink-0 flex flex-col space-y-1.5">
+                    <div className="flex flex-col gap-2 sm:gap-2.5" role="tablist" aria-label="Initiative Navigation">
                     {INITIATIVE_CONFIGS.map(tab => {
                       const Icon = tab.icon;
                       const isActive = activeTab === tab.id;
@@ -275,7 +262,8 @@ export const ArcanaPage: React.FC = () => {
                   />
                 </div>
               </div>
-            );
+            </div>
+          );
           })()}
 
         </section>

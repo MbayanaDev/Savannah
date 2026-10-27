@@ -164,25 +164,17 @@ export const CertificationsThreadCarousel: React.FC = () => {
   return (
     <div className="space-y-2.5">
       {/* Header Bar */}
-      <div className="flex items-center gap-2 px-1">
-        <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600" />
-        </span>
-        <h3 className="font-display font-extrabold text-xs sm:text-sm text-stone-900 tracking-tight">
-          Partners We Work With
+      <div className="flex items-center gap-2.5 px-0.5">
+        <h3 className="font-display font-extrabold text-xl sm:text-2xl md:text-3xl text-stone-900 tracking-tight">
+          Our Co-creating Partners
         </h3>
       </div>
 
-      {/* CONTINUOUS RIGHT-TO-LEFT LOOP MARQUEE CONTAINER */}
-      <div className="relative overflow-hidden w-full py-1">
-        {/* Left and Right Gradient Masks */}
-        <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-8 sm:w-16 bg-gradient-to-r from-[#FBF9F5] via-[#FBF9F5]/80 to-transparent z-10" />
-        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 sm:w-16 bg-gradient-to-l from-[#FBF9F5] via-[#FBF9F5]/80 to-transparent z-10" />
-
+      {/* CONTINUOUS RIGHT-TO-LEFT LOOP MARQUEE CONTAINER (full bleed, no left/right gutter) */}
+      <div className="-mx-4 sm:-mx-6 overflow-hidden py-1">
         {/* Continuous Flowing Track */}
         <div 
-          className="animate-partner-loop gap-3 flex items-center"
+          className="animate-partner-loop gap-3.5 sm:gap-4 flex items-start"
           style={{ animationPlayState: isPaused ? 'paused' : undefined }}
         >
           {loopItems.map((partner, idx) => (
@@ -190,11 +182,11 @@ export const CertificationsThreadCarousel: React.FC = () => {
               key={`${partner.id}-${idx}`}
               type="button"
               onClick={() => handleSelectPartner(partner)}
-              className="w-72 sm:w-80 shrink-0 flex items-center gap-3 p-2.5 sm:p-3 rounded-2xl bg-white border border-stone-200/90 shadow-2xs hover:shadow-md hover:border-emerald-300 transition-all text-left cursor-pointer group"
+              className="w-24 sm:w-28 shrink-0 flex flex-col items-center text-center cursor-pointer group"
               title={`Click to view ${partner.name} collaboration details`}
             >
-              {/* Partner Logo Image */}
-              <div className="w-11 h-11 rounded-xl overflow-hidden shrink-0 bg-stone-100 border border-stone-200 shadow-2xs">
+              {/* Circular Image Child */}
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden bg-stone-100 border border-stone-200/90 shadow-2xs mb-1.5 shrink-0">
                 <img
                   src={partner.logoImage}
                   alt={partner.name}
@@ -204,14 +196,13 @@ export const CertificationsThreadCarousel: React.FC = () => {
                 />
               </div>
 
-              {/* Organisation Name and Partner Role */}
-              <div className="min-w-0 flex-1">
-                <div className="text-xs sm:text-[13px] font-display font-bold text-stone-900 leading-snug group-hover:text-emerald-900 transition-colors truncate">
-                  {partner.name}
+              {/* Text Below: Organisation Name and short detail with wrapping and reduced font */}
+              <div className="w-full px-0.5">
+                <div className="text-[11px] sm:text-xs font-display font-bold text-stone-900 leading-tight group-hover:text-emerald-900 transition-colors break-words">
+                  {partner.organisation}
                 </div>
-                <div className="text-[10.5px] font-semibold text-emerald-800 flex items-center gap-1.5 mt-0.5">
-                  <Handshake className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span className="truncate">{partner.partnerRole}</span>
+                <div className="text-[10px] text-stone-500 leading-snug mt-0.5 break-words">
+                  {partner.partnerRole}
                 </div>
               </div>
             </button>

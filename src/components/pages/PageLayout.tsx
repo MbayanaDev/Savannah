@@ -5,9 +5,11 @@ import { ViewMode } from '../../types';
 
 interface PageLayoutProps {
   badge?: string;
-  title: string;
+  title?: string;
   subtitle?: string;
   currentPage: string;
+  headerImage?: string;
+  headerImageAlt?: string;
   children: React.ReactNode;
 }
 
@@ -15,6 +17,8 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
   title,
   subtitle,
   currentPage,
+  headerImage,
+  headerImageAlt,
   children
 }) => {
   const { setViewMode } = useStore();
@@ -53,16 +57,30 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
 
         {/* Main Page Content */}
         <main className="max-w-4xl mx-auto px-4 sm:px-6 pt-5 pb-8 sm:pt-6 sm:pb-10 space-y-6">
-          <div className="text-center space-y-1.5 pb-1">
-            <h1 className="font-display font-black text-xl sm:text-3xl text-stone-900 tracking-tight">
-              {title}
-            </h1>
-            {subtitle && (
-              <p className="text-xs sm:text-sm text-stone-600 max-w-2xl mx-auto leading-relaxed">
-                {subtitle}
-              </p>
-            )}
-          </div>
+          {headerImage && (
+            <div className="relative w-full h-44 sm:h-56 md:h-64 rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs border border-stone-200/80 bg-stone-100 mb-2">
+              <img
+                src={headerImage}
+                alt={headerImageAlt || title}
+                className="w-full h-full object-cover"
+                loading="eager"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent pointer-events-none" />
+            </div>
+          )}
+
+          {title && (
+            <div className="text-center space-y-1.5 pb-1">
+              <h1 className="font-display font-black text-xl sm:text-3xl text-stone-900 tracking-tight">
+                {title}
+              </h1>
+              {subtitle && (
+                <p className="text-xs sm:text-sm text-stone-600 max-w-2xl mx-auto leading-relaxed">
+                  {subtitle}
+                </p>
+              )}
+            </div>
+          )}
 
           {children}
 
