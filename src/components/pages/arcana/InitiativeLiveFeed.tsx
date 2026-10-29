@@ -690,19 +690,8 @@ export const InitiativeLiveFeed: React.FC<InitiativeLiveFeedProps> = ({
                 </div>
               </div>
 
-              {/* Bottom Section: Tags across the bottom + View CTA */}
-              <div className="w-full flex items-center justify-between gap-1.5 pt-1 border-t border-stone-100">
-                <div className="flex flex-wrap items-center gap-1 min-w-0 flex-1">
-                  {item.attributes.map((attr, aIdx) => (
-                    <span 
-                      key={aIdx}
-                      className="text-[7px] sm:text-[7.5px] font-mono font-semibold px-1.5 py-[1.5px] rounded-full border border-emerald-200/80 bg-emerald-50/90 text-emerald-900 whitespace-nowrap leading-none tracking-tight shadow-2xs"
-                    >
-                      {attr}
-                    </span>
-                  ))}
-                </div>
-
+              {/* Bottom Section: View CTA */}
+              <div className="w-full flex items-center justify-end pt-1 border-t border-stone-100">
                 <button
                   type="button"
                   onClick={() => {

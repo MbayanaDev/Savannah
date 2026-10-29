@@ -24,10 +24,11 @@ export const MobileBottomNav: React.FC = () => {
     } else if (tab === 'profile') {
       setIsProfileOpen(true);
     } else if (tab === 'orders') {
-      setViewMode('store');
+      setViewMode('orders');
       if (orders.length > 0) {
         setActiveTrackOrder(orders[0]);
       }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (tab === 'arcana') {
       setViewMode('arcana');
     } else {
@@ -96,7 +97,7 @@ export const MobileBottomNav: React.FC = () => {
         <button
           onClick={() => handleTabClick('orders')}
           className={`flex flex-col items-center justify-center min-h-[48px] py-1 transition-colors cursor-pointer ${
-            activeMobileTab === 'orders'
+            activeMobileTab === 'orders' || viewMode === 'orders'
               ? 'text-[#173b28] font-semibold'
               : 'text-stone-500 hover:text-stone-800'
           }`}

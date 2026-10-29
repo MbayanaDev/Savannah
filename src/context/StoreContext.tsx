@@ -676,6 +676,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setOrders(prev => [newOrder, ...prev]);
     clearCart();
     setActiveTrackOrder(newOrder);
+    setViewMode('orders');
     showToast(`Order #${newOrder.id} confirmed! Preparing harvest basket.`, 'success');
 
     return newOrder;

@@ -15,9 +15,9 @@ import { RefundsPage } from './components/pages/RefundsPage';
 import { PrivacyPage } from './components/pages/PrivacyPage';
 import { TermsPage } from './components/pages/TermsPage';
 import { ArcanaPage } from './components/pages/ArcanaPage';
+import { OrdersPage } from './components/pages/OrdersPage';
 import { CartDrawer } from './components/CartDrawer';
 import { CheckoutModal } from './components/CheckoutModal';
-import { OrderConfirmationModal } from './components/OrderConfirmationModal';
 import { NeighborhoodModal } from './components/NeighborhoodModal';
 import { ProductDetailModal } from './components/ProductDetailModal';
 import { UtilitiesModal } from './components/UtilitiesModal';
@@ -29,12 +29,12 @@ const AppContent: React.FC = () => {
   const { viewMode } = useStore();
 
   return (
-    <div className="min-h-screen bg-[#FBF9F5] flex flex-col font-sans selection:bg-[#173b28] selection:text-white">
+    <div className="min-h-screen bg-[#FBF9F5] flex flex-col font-sans selection:bg-[#173b28] selection:text-white w-full max-w-full overflow-x-hidden">
       {/* Top Bar adhering to 3-zone contract */}
       <Header />
 
       {/* Main View: Storefront vs Merchant Operations Hub vs Dedicated Individual Pages */}
-      <main className="flex-1">
+      <main className="flex-1 w-full max-w-full overflow-x-hidden">
         {viewMode === 'store' && <Storefront />}
         {viewMode === 'admin' && <AdminDashboard />}
         {viewMode === 'about' && <AboutPage />}
@@ -45,12 +45,12 @@ const AppContent: React.FC = () => {
         {viewMode === 'terms' && <TermsPage />}
         {viewMode === 'arcana' && <ArcanaPage />}
         {viewMode === 'blog' && <AboutPage />}
+        {viewMode === 'orders' && <OrdersPage />}
       </main>
 
       {/* Global Modals & Drawers */}
       <CartDrawer />
       <CheckoutModal />
-      <OrderConfirmationModal />
       <NeighborhoodModal />
       <ProductDetailModal />
       <UtilitiesModal />

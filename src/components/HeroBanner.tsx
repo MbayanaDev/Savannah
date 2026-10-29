@@ -261,7 +261,7 @@ export const HeroBanner: React.FC = () => {
       </div>
 
       {/* 3. Below the carousel: Subcategories in circular icon images with the name below icon image (No subcategories text/icon header) */}
-      <div id="subcategories-bar" className="max-w-7xl mx-auto px-4 sm:px-6 pt-5 sm:pt-6">
+      <div id="subcategories-bar" className="max-w-7xl mx-auto px-4 sm:px-6 pt-5 sm:pt-6 w-full max-w-full overflow-hidden">
         <div className="flex items-start justify-start sm:justify-center gap-3.5 sm:gap-6 overflow-x-auto scrollbar-none py-2 px-1">
           {/* "All" subcategory circular icon */}
           <button

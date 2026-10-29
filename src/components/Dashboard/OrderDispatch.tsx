@@ -4,7 +4,7 @@ import { useStore } from '../../context/StoreContext';
 import { Order, OrderStatus } from '../../types';
 
 export const OrderDispatch: React.FC = () => {
-  const { orders, updateOrderStatus, setActiveTrackOrder } = useStore();
+  const { orders, updateOrderStatus, setActiveTrackOrder, setViewMode } = useStore();
   const [filter, setFilter] = useState<'all' | OrderStatus>('all');
   const [search, setSearch] = useState('');
   const [assigningOrder, setAssigningOrder] = useState<Order | null>(null);
@@ -172,7 +172,10 @@ export const OrderDispatch: React.FC = () => {
                 )}
 
                 <button
-                  onClick={() => setActiveTrackOrder(order)}
+                  onClick={() => {
+                    setActiveTrackOrder(order);
+                    setViewMode('orders');
+                  }}
                   className="px-2.5 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-medium rounded-xl transition-colors cursor-pointer"
                 >
                   Inspect

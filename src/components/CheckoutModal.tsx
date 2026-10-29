@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, ArrowRight, Check, Loader2, MapPin, ChevronDown, Bike, Wallet, Banknote } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Loader2, MapPin, ChevronDown, Bike } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { NAIROBI_NEIGHBORHOODS } from '../data/neighborhoods';
+import mpesaLogoImg from '../assets/images/mpesa_logo.png';
 
 export const CheckoutModal: React.FC = () => {
   const {
@@ -28,7 +29,10 @@ export const CheckoutModal: React.FC = () => {
   const [deliveryType, setDeliveryType] = useState<'express' | 'scheduled'>('express');
   const [selectedDeliveryDate, setSelectedDeliveryDate] = useState<'today' | 'tomorrow'>('today');
   const [selectedTimeWindow, setSelectedTimeWindow] = useState('2:00 PM - 5:00 PM (Afternoon)');
-  const [isDeliveryCollapsed, setIsDeliveryCollapsed] = useState(false);
+  const [isAddressSectionOpen, setIsAddressSectionOpen] = useState(true);
+  const [isDeliveryMethodOpen, setIsDeliveryMethodOpen] = useState(true);
+  const [isDeliveryDateOpen, setIsDeliveryDateOpen] = useState(true);
+  const [isPaymentSectionOpen, setIsPaymentSectionOpen] = useState(true);
 
   const today = new Date();
   const todayDateStr = today.toLocaleDateString('en-US', {
@@ -180,174 +184,228 @@ export const CheckoutModal: React.FC = () => {
           <div className="overflow-y-auto flex-1 px-4 pt-2.5 pb-4 sm:px-6 sm:pt-3 sm:pb-5 space-y-4">
           {/* Section: Delivery Location */}
           <div className="space-y-3">
-            {/* Container with Name and Chosen Address - Compact */}
-            <div className="bg-stone-50/80 border border-stone-200/90 rounded-2xl p-2.5 sm:p-3 shadow-2xs space-y-1.5">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[11px] sm:text-xs font-semibold text-stone-700">
-                  Your order will be delivered to:
+            {/* Delivery Container */}
+            <div className="bg-stone-50/80 border border-stone-200/90 rounded-2xl shadow-2xs p-3.5 sm:p-4 space-y-3">
+              {/* Main Container Header - No chevron */}
+              <div className="flex items-center gap-2 min-w-0 pb-1.5 border-b border-stone-200/70">
+                <Bike className="w-4 h-4 text-[#173b28] shrink-0" />
+                <span className="text-xs font-bold text-stone-900 uppercase tracking-wider shrink-0">
+                  Delivery
                 </span>
+              </div>
+
+              {/* Section 1: Delivery Location Details */}
+              <div className="space-y-1.5 pb-2.5 border-b border-stone-200/80">
                 <button
                   type="button"
-                  onClick={() => setIsChangingAddress(!isChangingAddress)}
-                  className="px-2 py-0.5 bg-white hover:bg-emerald-50 text-emerald-800 hover:text-emerald-900 border border-emerald-300 rounded-md text-[11px] font-semibold shadow-2xs transition-colors cursor-pointer shrink-0 flex items-center gap-1"
+                  onClick={() => setIsAddressSectionOpen(!isAddressSectionOpen)}
+                  className="w-full text-left cursor-pointer group select-none flex flex-col gap-1"
                 >
-                  <span>{isChangingAddress ? 'Close' : 'Change'}</span>
-                  <ChevronDown className={`w-3 h-3 transition-transform ${isChangingAddress ? 'rotate-180' : ''}`} />
-                </button>
-              </div>
-
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-6 h-6 rounded-lg bg-emerald-50 border border-emerald-200/70 text-emerald-800 flex items-center justify-center shrink-0">
-                  <MapPin className="w-3.5 h-3.5" />
-                </div>
-                <div className="min-w-0 flex-1 leading-tight">
-                  <div className="text-xs sm:text-sm font-bold text-stone-900 truncate">
-                    <span>{name}</span>
-                    <span className="font-normal text-stone-400 mx-1.5">·</span>
-                    <span className="font-semibold text-stone-800">
-                      {activeSavedAddress 
-                        ? `${activeSavedAddress.apartment}, ${activeSavedAddress.street}` 
-                        : address}
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-[11px] sm:text-xs font-semibold text-stone-700">
+                      Your order will be delivered to:
                     </span>
+                    <ChevronDown className={`w-3.5 h-3.5 text-stone-500 group-hover:text-stone-800 transition-transform duration-200 ${isAddressSectionOpen ? 'rotate-180' : ''}`} />
                   </div>
-                  <div className="text-[11px] text-stone-500 truncate mt-0.5">
-                    {activeSavedAddress ? activeSavedAddress.region : selectedNeighborhood.name}, Nairobi{activeSavedAddress?.reference ? ` · Ref: ${activeSavedAddress.reference}` : ''}
-                  </div>
-                </div>
-              </div>
 
-              {/* Saved Address Switcher Drawer */}
-              {isChangingAddress && (
-                <div className="mt-2 pt-2 border-t border-stone-200 space-y-1.5 animate-in fade-in duration-150">
-                  <div className="text-[11px] font-semibold text-stone-600">
-                    Select a drop-off location:
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                    {savedAddresses.map((addr) => {
-                      const isSelected = activeSavedAddress?.id === addr.id;
-                      return (
-                        <button
-                          type="button"
-                          key={addr.id}
-                          onClick={() => {
-                            selectAddress(addr.id);
-                            setIsChangingAddress(false);
-                          }}
-                          className={`p-2 rounded-xl border text-left text-xs transition-all cursor-pointer flex flex-col justify-between gap-0.5 ${
-                            isSelected
-                              ? 'border-[#173b28] bg-[#EBF5ED] text-[#173b28] ring-1 ring-[#173b28]'
-                              : 'border-stone-200 bg-white hover:bg-stone-50 text-stone-700'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold text-xs">{addr.label}</span>
-                            {isSelected && <Check className="w-3.5 h-3.5 text-[#173b28]" />}
-                          </div>
-                          <div className="text-[11px] text-stone-600 line-clamp-1">
-                            {addr.apartment}, {addr.street}
-                          </div>
-                          <div className="text-[10px] text-stone-400">{addr.region}</div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Below that: Delivery Container (Collapsable) */}
-            <div className={`bg-stone-50/80 border border-stone-200/90 rounded-2xl shadow-2xs transition-all ${isDeliveryCollapsed ? 'p-3 sm:p-3.5' : 'p-3.5 sm:p-4 space-y-2.5'}`}>
-              <button
-                type="button"
-                onClick={() => setIsDeliveryCollapsed(!isDeliveryCollapsed)}
-                className="w-full flex items-center justify-between text-left cursor-pointer group select-none"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <Bike className="w-4 h-4 text-[#173b28] shrink-0" />
-                  <span className="text-xs font-bold text-stone-900 uppercase tracking-wider shrink-0">
-                    Delivery
-                  </span>
-                  {isDeliveryCollapsed && (
-                    <span className="text-xs font-medium text-stone-600 truncate ml-0.5">
-                      · {deliveryType === 'express' ? 'Express (45 mins)' : `Scheduled (${selectedDeliveryDate === 'today' ? 'Today' : 'Tomorrow'})`} · {effectiveDeliveryFee === 0 ? 'Free' : `KES ${effectiveDeliveryFee.toLocaleString()}`}
-                    </span>
+                  {!isAddressSectionOpen && (
+                    <div className="pt-0.5 flex items-start gap-2 min-w-0 text-left animate-in fade-in duration-150">
+                      <div className="w-5 h-5 rounded-md bg-emerald-50 border border-emerald-200/70 text-emerald-800 flex items-center justify-center shrink-0 mt-0.5">
+                        <MapPin className="w-3 h-3" />
+                      </div>
+                      <div className="min-w-0 flex-1 leading-snug">
+                        <div className="text-xs sm:text-sm font-bold text-stone-900 truncate">
+                          <span>{name}</span>
+                          <span className="font-normal text-stone-400 mx-1.5">·</span>
+                          <span className="font-semibold text-stone-800">
+                            {activeSavedAddress 
+                              ? `${activeSavedAddress.apartment}, ${activeSavedAddress.street}` 
+                              : address}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-stone-500 truncate mt-0.5">
+                          {activeSavedAddress ? activeSavedAddress.region : selectedNeighborhood.name}, Nairobi{activeSavedAddress?.reference ? ` · Ref: ${activeSavedAddress.reference}` : ''}
+                        </div>
+                      </div>
+                    </div>
                   )}
-                </div>
+                </button>
 
-                <div className="flex items-center gap-1 text-stone-500 group-hover:text-stone-800 shrink-0 ml-2">
-                  <span className="text-[11px] font-medium text-stone-400 sm:inline hidden">
-                    {isDeliveryCollapsed ? 'Change' : 'Collapse'}
-                  </span>
-                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${!isDeliveryCollapsed ? 'rotate-180' : ''}`} />
-                </div>
-              </button>
-
-              {/* Collapsable Content */}
-              {!isDeliveryCollapsed && (
-                <div className="space-y-2.5 pt-1 animate-in fade-in duration-150">
-                  {/* Text above radio buttons */}
-                  <p className="text-xs font-semibold text-stone-800">
-                    How should we deliver your order?
-                  </p>
-
-                  {/* Radio buttons for Express and Scheduled in a column */}
-                  <div className="flex flex-col gap-2.5 pt-0.5">
-                    <label className="flex items-start gap-2.5 cursor-pointer select-none">
-                      <input
-                        type="radio"
-                        name="deliveryMethod"
-                        value="express"
-                        checked={deliveryType === 'express'}
-                        onChange={() => {
-                          setDeliveryType('express');
-                          setDeliverySlot(`${selectedDeliveryDate === 'today' ? 'Today' : 'Tomorrow'}, 45 mins (Express)`);
-                        }}
-                        className="w-4 h-4 mt-0.5 text-[#173b28] focus:ring-[#173b28] accent-[#173b28] cursor-pointer shrink-0"
-                      />
-                      <div className="flex flex-col leading-tight">
-                        <span className={`text-xs font-semibold ${deliveryType === 'express' ? 'text-stone-900' : 'text-stone-700'}`}>
-                          Express
-                        </span>
-                        <span className="text-[11px] font-mono text-stone-500 font-medium">
-                          KES 350
-                        </span>
+                {isAddressSectionOpen && (
+                  <div className="space-y-1.5 pt-0.5 animate-in fade-in duration-150">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <div className="w-6 h-6 rounded-lg bg-emerald-50 border border-emerald-200/70 text-emerald-800 flex items-center justify-center shrink-0">
+                          <MapPin className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="min-w-0 flex-1 leading-tight">
+                          <div className="text-xs sm:text-sm font-bold text-stone-900 truncate">
+                            <span>{name}</span>
+                            <span className="font-normal text-stone-400 mx-1.5">·</span>
+                            <span className="font-semibold text-stone-800">
+                              {activeSavedAddress 
+                                ? `${activeSavedAddress.apartment}, ${activeSavedAddress.street}` 
+                                : address}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-stone-500 truncate mt-0.5">
+                            {activeSavedAddress ? activeSavedAddress.region : selectedNeighborhood.name}, Nairobi{activeSavedAddress?.reference ? ` · Ref: ${activeSavedAddress.reference}` : ''}
+                          </div>
+                        </div>
                       </div>
-                    </label>
 
-                    <label className="flex items-start gap-2.5 cursor-pointer select-none">
-                      <input
-                        type="radio"
-                        name="deliveryMethod"
-                        value="scheduled"
-                        checked={deliveryType === 'scheduled'}
-                        onChange={() => {
-                          setDeliveryType('scheduled');
-                          setDeliverySlot(`${selectedDeliveryDate === 'today' ? 'Today' : 'Tomorrow'} (${selectedTimeWindow})`);
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsChangingAddress(!isChangingAddress);
                         }}
-                        className="w-4 h-4 mt-0.5 text-[#173b28] focus:ring-[#173b28] accent-[#173b28] cursor-pointer shrink-0"
-                      />
-                      <div className="flex flex-col leading-tight">
-                        <span className={`text-xs font-semibold ${deliveryType === 'scheduled' ? 'text-stone-900' : 'text-stone-700'}`}>
-                          Scheduled
-                        </span>
-                        <span className="text-[11px] font-mono text-stone-500 font-medium">
-                          KES 200
-                        </span>
+                        className="px-2 py-0.5 bg-white hover:bg-emerald-50 text-emerald-800 hover:text-emerald-900 border border-emerald-300 rounded-md text-[11px] font-semibold shadow-2xs transition-colors cursor-pointer shrink-0 flex items-center gap-1"
+                      >
+                        <span>{isChangingAddress ? 'Close' : 'Change'}</span>
+                        <ChevronDown className={`w-3 h-3 transition-transform ${isChangingAddress ? 'rotate-180' : ''}`} />
+                      </button>
+                    </div>
+
+                    {/* Saved Address Switcher Drawer */}
+                    {isChangingAddress && (
+                      <div className="mt-2 pt-2 border-t border-stone-200 space-y-1.5 animate-in fade-in duration-150">
+                        <div className="text-[11px] font-semibold text-stone-600">
+                          Select a drop-off location:
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                          {savedAddresses.map((addr) => {
+                            const isSelected = activeSavedAddress?.id === addr.id;
+                            return (
+                              <button
+                                type="button"
+                                key={addr.id}
+                                onClick={() => {
+                                  selectAddress(addr.id);
+                                  setIsChangingAddress(false);
+                                }}
+                                className={`p-2 rounded-xl border text-left text-xs transition-all cursor-pointer flex flex-col justify-between gap-0.5 ${
+                                  isSelected
+                                    ? 'border-[#173b28] bg-[#EBF5ED] text-[#173b28] ring-1 ring-[#173b28]'
+                                    : 'border-stone-200 bg-white hover:bg-stone-50 text-stone-700'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="font-bold text-xs">{addr.label}</span>
+                                  {isSelected && <Check className="w-3.5 h-3.5 text-[#173b28]" />}
+                                </div>
+                                <div className="text-[11px] text-stone-600 line-clamp-1">
+                                  {addr.apartment}, {addr.street}
+                                </div>
+                                <div className="text-[10px] text-stone-400">{addr.region}</div>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </label>
+                    )}
                   </div>
+                )}
+              </div>
 
-                  {/* Savannah Express notice */}
-                  <p className="text-xs text-stone-600">
-                    Order Savannah Express for delivery in 45 minutes 7am-7pm.
-                  </p>
+              {/* Section 2: Delivery Method */}
+              <div className="space-y-2 pb-2.5 border-b border-stone-200/80">
+                <button
+                  type="button"
+                  onClick={() => setIsDeliveryMethodOpen(!isDeliveryMethodOpen)}
+                  className="w-full text-left cursor-pointer group select-none flex flex-col gap-1"
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-xs font-semibold text-stone-800">
+                      How should we deliver your order?
+                    </span>
+                    <ChevronDown className={`w-3.5 h-3.5 text-stone-500 group-hover:text-stone-800 transition-transform duration-200 ${isDeliveryMethodOpen ? 'rotate-180' : ''}`} />
+                  </div>
+                  {!isDeliveryMethodOpen && (
+                    <div className="text-[11px] text-stone-600 font-medium animate-in fade-in duration-150">
+                      <span className="font-bold text-stone-900">{deliveryType === 'express' ? 'Express (45 mins)' : 'Scheduled'}</span> · {effectiveDeliveryFee === 0 ? 'Free' : `KES ${effectiveDeliveryFee.toLocaleString()}`}
+                    </div>
+                  )}
+                </button>
 
-                  {/* Subheader: Select Delivery Date */}
-                  <div className="space-y-2 pt-1 border-t border-stone-200/60">
+                {isDeliveryMethodOpen && (
+                  <div className="space-y-2 pt-0.5 animate-in fade-in duration-150">
+                    <div className="flex flex-col gap-2.5 pt-0.5">
+                      <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                        <input
+                          type="radio"
+                          name="deliveryMethod"
+                          value="express"
+                          checked={deliveryType === 'express'}
+                          onChange={() => {
+                            setDeliveryType('express');
+                            setDeliverySlot(`${selectedDeliveryDate === 'today' ? 'Today' : 'Tomorrow'}, 45 mins (Express)`);
+                          }}
+                          className="w-4 h-4 mt-0.5 text-[#173b28] focus:ring-[#173b28] accent-[#173b28] cursor-pointer shrink-0"
+                        />
+                        <div className="flex flex-col leading-tight">
+                          <span className={`text-xs font-semibold ${deliveryType === 'express' ? 'text-stone-900' : 'text-stone-700'}`}>
+                            Express
+                          </span>
+                          <span className="text-[11px] font-mono text-stone-500 font-medium">
+                            KES 350
+                          </span>
+                        </div>
+                      </label>
+
+                      <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                        <input
+                          type="radio"
+                          name="deliveryMethod"
+                          value="scheduled"
+                          checked={deliveryType === 'scheduled'}
+                          onChange={() => {
+                            setDeliveryType('scheduled');
+                            setDeliverySlot(`${selectedDeliveryDate === 'today' ? 'Today' : 'Tomorrow'} (${selectedTimeWindow})`);
+                          }}
+                          className="w-4 h-4 mt-0.5 text-[#173b28] focus:ring-[#173b28] accent-[#173b28] cursor-pointer shrink-0"
+                        />
+                        <div className="flex flex-col leading-tight">
+                          <span className={`text-xs font-semibold ${deliveryType === 'scheduled' ? 'text-stone-900' : 'text-stone-700'}`}>
+                            Scheduled
+                          </span>
+                          <span className="text-[11px] font-mono text-stone-500 font-medium">
+                            KES 200
+                          </span>
+                        </div>
+                      </label>
+                    </div>
+
+                    {/* Savannah Express notice */}
+                    <p className="text-xs text-stone-600">
+                      Order Savannah Express for delivery in 45 minutes 7am-7pm.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Section 3: Select Delivery Date */}
+              <div className="space-y-2 pb-2.5 border-b border-stone-200/80">
+                <button
+                  type="button"
+                  onClick={() => setIsDeliveryDateOpen(!isDeliveryDateOpen)}
+                  className="w-full text-left cursor-pointer group select-none flex flex-col gap-1"
+                >
+                  <div className="flex items-center justify-between w-full">
                     <h5 className="text-xs font-semibold text-stone-900">
                       Select Delivery Date
                     </h5>
+                    <ChevronDown className={`w-3.5 h-3.5 text-stone-500 group-hover:text-stone-800 transition-transform duration-200 ${isDeliveryDateOpen ? 'rotate-180' : ''}`} />
+                  </div>
+                  {!isDeliveryDateOpen && (
+                    <div className="text-[11px] text-stone-600 font-medium animate-in fade-in duration-150">
+                      <span className="font-bold text-stone-900">{selectedDeliveryDate === 'today' ? 'Today' : 'Tomorrow'}</span> · {selectedDeliveryDate === 'today' ? todayDateStr : tomorrowDateStr}{deliveryType === 'scheduled' ? ` (${selectedTimeWindow})` : ''}
+                    </div>
+                  )}
+                </button>
 
+                {isDeliveryDateOpen && (
+                  <div className="space-y-2 pt-0.5 animate-in fade-in duration-150">
                     <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
                       <button
                         type="button"
@@ -389,127 +447,113 @@ export const CheckoutModal: React.FC = () => {
                         <span className="text-[11px] font-medium opacity-80">{tomorrowDateStr}</span>
                       </button>
                     </div>
+
+                    {/* Slot picker for Scheduled if selected */}
+                    {deliveryType === 'scheduled' && (
+                      <div className="pt-1 space-y-1.5 animate-in fade-in duration-150">
+                        <div className="text-[11px] font-medium text-stone-600">
+                          Preferred window:
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {[
+                            '8:00 AM - 11:00 AM (Morning)',
+                            '2:00 PM - 5:00 PM (Afternoon)',
+                            '5:00 PM - 8:00 PM (Evening)'
+                          ].map((slot) => (
+                            <button
+                              type="button"
+                              key={slot}
+                              onClick={() => {
+                                setSelectedTimeWindow(slot);
+                                setDeliverySlot(`${selectedDeliveryDate === 'today' ? 'Today' : 'Tomorrow'} (${slot})`);
+                              }}
+                              className={`p-2 rounded-lg border text-left text-xs font-medium transition-all cursor-pointer ${
+                                selectedTimeWindow === slot
+                                  ? 'border-[#173b28] bg-white text-[#173b28] font-bold shadow-2xs'
+                                  : 'border-stone-200 bg-white/70 hover:bg-white text-stone-700'
+                              }`}
+                            >
+                              {slot}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-
-                  {/* Slot picker for Scheduled if selected */}
-                  {deliveryType === 'scheduled' && (
-                    <div className="pt-1 space-y-1.5 animate-in fade-in duration-150">
-                      <div className="text-[11px] font-medium text-stone-600">
-                        Preferred window:
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {[
-                          '8:00 AM - 11:00 AM (Morning)',
-                          '2:00 PM - 5:00 PM (Afternoon)',
-                          '5:00 PM - 8:00 PM (Evening)'
-                        ].map((slot) => (
-                          <button
-                            type="button"
-                            key={slot}
-                            onClick={() => {
-                              setSelectedTimeWindow(slot);
-                              setDeliverySlot(`${selectedDeliveryDate === 'today' ? 'Today' : 'Tomorrow'} (${slot})`);
-                            }}
-                            className={`p-2 rounded-lg border text-left text-xs font-medium transition-all cursor-pointer ${
-                              selectedTimeWindow === slot
-                                ? 'border-[#173b28] bg-white text-[#173b28] font-bold shadow-2xs'
-                                : 'border-stone-200 bg-white/70 hover:bg-white text-stone-700'
-                            }`}
-                          >
-                            {slot}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Payment Method Container (Options for Cash and Mpesa) */}
-            <div className="bg-stone-50/80 border border-stone-200/90 rounded-2xl p-3 sm:p-3.5 shadow-2xs space-y-2.5">
-              <div className="flex items-center gap-2">
-                <Wallet className="w-4 h-4 text-[#173b28] shrink-0" />
-                <span className="text-xs font-bold text-stone-900 uppercase tracking-wider">
-                  Payment Method
-                </span>
+                )}
               </div>
 
-              {/* Options for Cash and Mpesa */}
-              <div className="flex flex-col gap-2 pt-0.5">
-                {/* Mpesa Option */}
-                <label
-                  onClick={() => setPaymentMethod('mpesa')}
-                  className={`flex items-start gap-2.5 p-2.5 sm:p-3 rounded-xl border transition-all cursor-pointer select-none ${
-                    paymentMethod === 'mpesa'
-                      ? 'border-[#009A44] bg-[#009A44]/5 ring-1 ring-[#009A44]'
-                      : 'border-stone-200 bg-white hover:bg-stone-50 text-stone-700'
-                  }`}
+              {/* Section 4: M-Pesa Number Input Area */}
+              <div className="space-y-1.5 pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => setIsPaymentSectionOpen(!isPaymentSectionOpen)}
+                  className="w-full text-left cursor-pointer group select-none flex flex-col gap-1"
                 >
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="mpesa"
-                    checked={paymentMethod === 'mpesa'}
-                    onChange={() => setPaymentMethod('mpesa')}
-                    className="w-4 h-4 mt-0.5 text-[#009A44] focus:ring-[#009A44] accent-[#009A44] cursor-pointer shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-xs sm:text-sm text-stone-900">
-                          M-Pesa
-                        </span>
-                        <span className="text-[10px] font-bold bg-[#009A44] text-white px-1.5 py-0.2 rounded-md uppercase tracking-wider">
-                          STK Push
-                        </span>
-                      </div>
-                      {paymentMethod === 'mpesa' && (
-                        <Check className="w-3.5 h-3.5 text-[#009A44] shrink-0" />
-                      )}
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-stone-900">
+                        M-Pesa Number
+                      </span>
+                      <span className="text-[11px] text-stone-400 font-medium">· Safaricom</span>
                     </div>
-                    <p className="text-[11px] text-stone-600 mt-0.5 leading-snug">
-                      Instant STK push prompt to {phone || 'your phone'}. Enter PIN to confirm.
-                    </p>
+                    <ChevronDown className={`w-3.5 h-3.5 text-stone-500 group-hover:text-stone-800 transition-transform duration-200 ${isPaymentSectionOpen ? 'rotate-180' : ''}`} />
                   </div>
-                </label>
+                  {!isPaymentSectionOpen && (
+                    <div className="text-[11px] text-stone-600 font-medium font-mono animate-in fade-in duration-150">
+                      {phone || '07XX XXX XXX'}
+                    </div>
+                  )}
+                </button>
 
-                {/* Cash Option */}
-                <label
-                  onClick={() => setPaymentMethod('cash')}
-                  className={`flex items-start gap-2.5 p-2.5 sm:p-3 rounded-xl border transition-all cursor-pointer select-none ${
-                    paymentMethod === 'cash'
-                      ? 'border-[#173b28] bg-[#EBF5ED] ring-1 ring-[#173b28]'
-                      : 'border-stone-200 bg-white hover:bg-stone-50 text-stone-700'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="cash"
-                    checked={paymentMethod === 'cash'}
-                    onChange={() => setPaymentMethod('cash')}
-                    className="w-4 h-4 mt-0.5 text-[#173b28] focus:ring-[#173b28] accent-[#173b28] cursor-pointer shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-xs sm:text-sm text-stone-900">
-                          Cash
-                        </span>
-                        <span className="text-[10px] font-semibold bg-stone-200 text-stone-700 px-1.5 py-0.2 rounded-md">
-                          On Delivery
-                        </span>
+                {isPaymentSectionOpen && (
+                  <div className="space-y-2 pt-1 animate-in fade-in duration-150">
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1 flex items-center min-w-0 h-11">
+                        {/* Leading official M-Pesa Logo - covers full height */}
+                        <div className="absolute left-1 inset-y-1 flex items-center pointer-events-none shrink-0 z-10 overflow-hidden rounded-lg">
+                          <img 
+                            src={mpesaLogoImg} 
+                            alt="M-Pesa" 
+                            className="h-full w-auto object-contain"
+                          />
+                        </div>
+
+                        {/* Phone Number Input */}
+                        <input
+                          type="tel"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          placeholder="07XX XXX XXX"
+                          required
+                          className="w-full h-full bg-white border border-stone-200/90 hover:border-[#009A44]/60 focus:border-[#009A44] focus:ring-2 focus:ring-[#009A44]/20 rounded-xl pl-[96px] sm:pl-[102px] pr-3 text-xs sm:text-sm font-semibold text-stone-900 placeholder-stone-400 shadow-2xs transition-all outline-none"
+                        />
                       </div>
-                      {paymentMethod === 'cash' && (
-                        <Check className="w-3.5 h-3.5 text-[#173b28] shrink-0" />
-                      )}
+
+                      {/* Send OTP button to initiate the push - matches input height */}
+                      <button
+                        type="button"
+                        onClick={handleSubmit}
+                        disabled={isProcessing}
+                        className="h-11 px-3 sm:px-3.5 bg-[#009A44] hover:bg-[#00823a] active:scale-95 text-white text-[11px] sm:text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer shrink-0 disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap"
+                        title="Send OTP to initiate M-Pesa STK push"
+                      >
+                        {isProcessing ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>Sending...</span>
+                          </>
+                        ) : (
+                          <span>Send OTP</span>
+                        )}
+                      </button>
                     </div>
-                    <p className="text-[11px] text-stone-600 mt-0.5 leading-snug">
-                      Pay cash directly to the dispatch rider upon delivery.
+
+                    <p className="text-[11px] text-stone-500 leading-tight">
+                      Instant STK push prompt will be sent to <strong className="text-stone-700 font-semibold">{phone || 'your phone'}</strong>. Enter PIN to confirm.
                     </p>
                   </div>
-                </label>
+                )}
               </div>
             </div>
           </div>

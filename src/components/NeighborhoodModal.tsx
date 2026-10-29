@@ -597,26 +597,6 @@ export const NeighborhoodModal: React.FC = () => {
           </div>
         )}
 
-        {/* Modal Footer: Matching Orders and Tracking */}
-        <div className="p-3.5 sm:p-4 bg-stone-50 border-t border-stone-200 flex items-center justify-between">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="w-2 h-2 rounded-full bg-emerald-600 shrink-0 animate-pulse" />
-            <span className="text-xs text-stone-600 truncate">
-              Delivering to:{' '}
-              <span className="font-semibold text-stone-900">
-                {activeSavedAddress ? `${activeSavedAddress.label} (${activeSavedAddress.region})` : selectedNeighborhood.name}
-              </span>
-            </span>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setIsNeighborhoodModalOpen(false)}
-            className="px-4 py-1.5 rounded-lg bg-[#173b28] hover:bg-[#122e20] text-white text-xs font-semibold shadow-xs cursor-pointer transition-colors shrink-0"
-          >
-            Done
-          </button>
-        </div>
       </div>
 
       {/* Edit / Add / Replace Address Dialog Modal (Matching Orders and Tracking) */}

@@ -4,6 +4,7 @@ import { useStore } from '../context/StoreContext';
 import { ProductCard } from './ProductCard';
 import { HeroBanner } from './HeroBanner';
 import { Category } from '../types';
+import { SEED_ORDERS } from '../data/seedOrders';
 
 export const Storefront: React.FC = () => {
   const {
@@ -17,7 +18,9 @@ export const Storefront: React.FC = () => {
     searchQuery,
     setSearchQuery,
     setIsNeighborhoodModalOpen,
-    setViewMode
+    setViewMode,
+    setActiveTrackOrder,
+    orders
   } = useStore();
 
   const [sortBy, setSortBy] = useState<'Relevance' | 'Price' | 'New'>('Relevance');
@@ -279,11 +282,26 @@ export const Storefront: React.FC = () => {
                 </button>
                 <button
                   type="button"
+                  onClick={() => {
+                    setViewMode('orders');
+                    if (orders.length > 0) {
+                      setActiveTrackOrder(orders[0]);
+                    } else {
+                      setActiveTrackOrder(SEED_ORDERS[0]);
+                    }
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="text-left text-stone-600 hover:text-[#173b28] md:text-sm md:font-medium transition-colors cursor-pointer w-fit"
+                >
+                  Orders
+                </button>
+                <button
+                  type="button"
                   onClick={() => setViewMode('arcana')}
                   className="text-left text-emerald-800 hover:text-[#173b28] md:text-sm font-semibold transition-colors cursor-pointer w-fit flex items-center gap-1.5"
                 >
                   <span>Savannah Arcana</span>
-                  <span className="text-[9px] bg-emerald-100 text-emerald-800 font-mono px-1 rounded">SCIENCE</span>
+                  <span className="text-[9px] bg-emerald-100 text-emerald-800 font-sans px-1.5 py-0.5 rounded font-semibold whitespace-nowrap">co-create with us :)</span>
                 </button>
               </div>
 

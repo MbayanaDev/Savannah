@@ -463,69 +463,52 @@ export const OrderConfirmationModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/65 backdrop-blur-xs animate-in fade-in duration-200">
+    <div 
+      className="fixed inset-0 z-50 overflow-hidden bg-black/50 backdrop-blur-xs flex justify-end animate-in fade-in duration-200"
+      onClick={() => setActiveTrackOrder(null)}
+    >
       <div 
-        className="relative w-full max-w-xl bg-[#FCFBF8] rounded-xl overflow-hidden shadow-2xl border border-stone-200 max-h-[92vh] flex flex-col"
+        className="w-full max-w-xl md:max-w-2xl h-full bg-[#FCFBF8] shadow-2xl flex flex-col border-l border-stone-200 animate-in slide-in-from-right duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header: "Orders and Tracking" with leading icon (not an icon button), matching body background color */}
-        <div className="px-5 py-4 bg-[#FCFBF8] border-b border-stone-200/80 flex items-center justify-between">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <PackageCheck className="w-5 h-5 text-[#173b28] shrink-0" />
-            <h3 className="font-display font-extrabold text-base sm:text-lg text-stone-900 tracking-tight truncate">
-              Orders and Tracking
-            </h3>
-          </div>
-
+        {/* Top Dismiss Button */}
+        <div className="px-4 sm:px-6 pt-4 pb-1 flex items-center justify-end">
           <button
             onClick={() => setActiveTrackOrder(null)}
             className="w-8 h-8 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 flex items-center justify-center transition-colors cursor-pointer shrink-0"
-            aria-label="Close tracking"
+            aria-label="Close"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="overflow-y-auto flex-1 p-4 sm:p-6">
-          {/* Section: Orders */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between px-0.5">
-              <div className="flex items-center gap-2">
-                <span className="font-display font-bold text-stone-900 text-sm tracking-tight">
-                  Orders
-                </span>
-                <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded-full bg-stone-200/70 text-stone-700">
-                  {orders.length}
-                </span>
-              </div>
-            </div>
+        <div className="overflow-y-auto flex-1 p-4 sm:p-6 space-y-4">
+          {/* Scrollable list with no space between containers */}
+          <div className="space-y-0 divide-y divide-stone-200/80 rounded-xl border border-stone-200/90 overflow-hidden bg-white max-h-[480px] sm:max-h-[540px] overflow-y-auto">
+            {orders.map((o) => {
+              const isExpanded = expandedOrderId === o.id;
+              const stepIdx = getStepIndex(o.status);
+              const badge = getStatusBadgeConfig(o.status);
+              const isExpress = o.deliverySlot?.toLowerCase().includes('express');
 
-            {/* Scrollable orders list showing 5.5 collapsed containers */}
-            <div className="space-y-2.5 max-h-[430px] overflow-y-auto pr-1">
-              {orders.map((o) => {
-                const isExpanded = expandedOrderId === o.id;
-                const stepIdx = getStepIndex(o.status);
-                const badge = getStatusBadgeConfig(o.status);
-                const isExpress = o.deliverySlot?.toLowerCase().includes('express');
-
-                return (
-                  <div
-                    key={o.id}
-                    className={`rounded-lg border border-l-4 ${badge.borderLeft} bg-white overflow-hidden transition-all duration-200 shadow-2xs hover:shadow-sm ${
-                      isExpanded 
-                        ? badge.expandedBorder 
-                        : 'border-stone-200/90 hover:border-stone-300'
+              return (
+                <div
+                  key={o.id}
+                  className={`border-x-0 border-l-0 border-r-0 border-t-0 border-b-0 bg-white overflow-hidden transition-all duration-200 ${
+                    isExpanded 
+                      ? 'bg-stone-50/40' 
+                      : 'hover:bg-stone-50/30'
+                  }`}
+                >
+                  {/* Clickable Order Container Header */}
+                  <button
+                    type="button"
+                    onClick={() => setExpandedOrderId(isExpanded ? null : o.id)}
+                    className={`w-full p-3.5 sm:p-4 text-left transition-colors cursor-pointer ${
+                      isExpanded ? 'bg-stone-50/70' : 'hover:bg-stone-50/50'
                     }`}
                   >
-                    {/* Minimalist summary header - clickable to expand downward */}
-                    <button
-                      type="button"
-                      onClick={() => setExpandedOrderId(isExpanded ? null : o.id)}
-                      className={`w-full p-3.5 sm:p-4 text-left transition-colors cursor-pointer ${
-                        isExpanded ? 'bg-stone-50/70' : 'hover:bg-stone-50/50'
-                      }`}
-                    >
                       {/* Row 1: Order number on the left with leading icon dot and "At fulfillment x/4", Chevron down on the same row on the right */}
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
@@ -772,7 +755,6 @@ export const OrderConfirmationModal: React.FC = () => {
                 );
               })}
             </div>
-          </div>
 
           {/* Section: Delivery Addresses (2-column by n-rows minimalist grid) */}
           <div className="space-y-3 pt-2.5 mt-2 border-t border-stone-200/80">

@@ -2,6 +2,7 @@ import React from 'react';
 import { ArrowLeft, Phone, Mail, MapPin, MessageCircle, Facebook, Linkedin, Instagram } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { ViewMode } from '../../types';
+import { SEED_ORDERS } from '../../data/seedOrders';
 
 interface PageLayoutProps {
   badge?: string;
@@ -21,7 +22,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
   headerImageAlt,
   children
 }) => {
-  const { setViewMode } = useStore();
+  const { setViewMode, setActiveTrackOrder, orders } = useStore();
 
   const handleBackToShop = () => {
     setViewMode('store');
@@ -34,7 +35,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-[#FBF9F5] text-stone-800 flex flex-col justify-between">
+    <div className="min-h-screen bg-[#FBF9F5] text-stone-800 flex flex-col justify-between w-full max-w-full overflow-x-hidden">
       <div>
         {/* Top Breadcrumb & Back Bar */}
         <div className="bg-white border-b border-stone-200/80 sticky top-11 sm:top-12 z-20 shadow-2xs">
@@ -56,7 +57,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
         </div>
 
         {/* Main Page Content */}
-        <main className="max-w-4xl mx-auto px-4 sm:px-6 pt-5 pb-8 sm:pt-6 sm:pb-10 space-y-6">
+        <main className="max-w-4xl mx-auto px-4 sm:px-6 pt-5 pb-8 sm:pt-6 sm:pb-10 space-y-6 w-full max-w-full overflow-x-hidden">
           {headerImage && (
             <div className="relative w-full h-44 sm:h-56 md:h-64 rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs border border-stone-200/80 bg-stone-100 mb-2">
               <img
@@ -182,11 +183,25 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
                 Terms &amp; Conditions
               </button>
               <button 
+                onClick={() => {
+                  setViewMode('orders');
+                  if (orders.length > 0) {
+                    setActiveTrackOrder(orders[0]);
+                  } else {
+                    setActiveTrackOrder(SEED_ORDERS[0]);
+                  }
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }} 
+                className={`text-left transition-colors cursor-pointer ${currentPage === 'Orders' ? 'text-[#173b28] font-bold' : 'text-stone-600 hover:text-[#173b28]'}`}
+              >
+                Orders
+              </button>
+              <button 
                 onClick={() => navigateTo('arcana')} 
                 className={`text-left transition-colors cursor-pointer flex items-center gap-1.5 ${currentPage === 'Savannah Arcana' ? 'text-[#173b28] font-bold' : 'text-emerald-800 hover:text-[#173b28]'}`}
               >
                 <span>Savannah Arcana</span>
-                <span className="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-semibold">ECO &amp; SOLAR</span>
+                <span className="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-semibold whitespace-nowrap">co-create with us :)</span>
               </button>
             </div>
 
