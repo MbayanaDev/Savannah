@@ -16,6 +16,7 @@ import { PrivacyPage } from './components/pages/PrivacyPage';
 import { TermsPage } from './components/pages/TermsPage';
 import { ArcanaPage } from './components/pages/ArcanaPage';
 import { OrdersPage } from './components/pages/OrdersPage';
+import { ProfilePage } from './components/pages/ProfilePage';
 import { CartDrawer } from './components/CartDrawer';
 import { CheckoutModal } from './components/CheckoutModal';
 import { NeighborhoodModal } from './components/NeighborhoodModal';
@@ -46,6 +47,7 @@ const AppContent: React.FC = () => {
         {viewMode === 'arcana' && <ArcanaPage />}
         {viewMode === 'blog' && <AboutPage />}
         {viewMode === 'orders' && <OrdersPage />}
+        {viewMode === 'profile' && <ProfilePage />}
       </main>
 
       {/* Global Modals & Drawers */}

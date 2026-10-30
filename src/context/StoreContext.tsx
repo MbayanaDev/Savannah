@@ -11,7 +11,7 @@ interface StoreContextType {
   products: Product[];
   categories: Category[];
   currentUser: UserProfile | null;
-  signInWithGoogle: () => Promise<void>;
+  signInWithGoogle: (customUser?: Partial<UserProfile>) => Promise<void>;
   signOut: () => Promise<void>;
   categoriesList: CategoryInfo[];
   subcategoriesList: SubcategoryItem[];
@@ -294,37 +294,25 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
-  const signInWithGoogle = async () => {
-    try {
-      if (isSupabaseConfigured && supabase) {
-        const { error } = await supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            redirectTo: window.location.origin
-          }
-        });
-        if (error) {
-          console.warn('Supabase Google OAuth fallback triggered:', error.message);
-        } else {
-          return;
-        }
-      }
-    } catch (err) {
-      console.warn('Google sign in error, fallback to simulated user:', err);
-    }
+  const signInWithGoogle = async (customUser?: Partial<UserProfile>) => {
+    // Artificial small delay for realistic authentication feedback
+    await new Promise(resolve => setTimeout(resolve, 450));
 
-    // Instant seamless login fallback
-    const mockGoogleUser: UserProfile = {
-      id: 'usr_' + Math.floor(100000 + Math.random() * 900000),
-      name: 'Kelvin Munene',
-      email: 'klvnmunenembaya@gmail.com',
-      phone: '+254 700 892 019',
-      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+    const googleUser: UserProfile = {
+      id: customUser?.id || 'usr_' + Math.floor(100000 + Math.random() * 900000),
+      name: customUser?.name?.trim() || 'Kelvin Munene',
+      email: customUser?.email?.trim() || 'klvnmunenembaya@gmail.com',
+      phone: customUser?.phone?.trim() || '+254 700 892 019',
+      avatarUrl: customUser?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
       provider: 'google'
     };
-    setCurrentUser(mockGoogleUser);
-    localStorage.setItem('savannah_current_user', JSON.stringify(mockGoogleUser));
-    showToast(`Signed in with Google as ${mockGoogleUser.email}`, 'success');
+    setCurrentUser(googleUser);
+    try {
+      localStorage.setItem('savannah_current_user', JSON.stringify(googleUser));
+    } catch {
+      // ignore
+    }
+    showToast(`Signed in with Google as ${googleUser.email}`, 'success');
   };
 
   const signOut = async () => {

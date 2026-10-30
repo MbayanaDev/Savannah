@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, ArrowRight, Check, Loader2, MapPin, ChevronDown, Bike } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Loader2, MapPin, ChevronDown, Bike, Zap, Clock } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { NAIROBI_NEIGHBORHOODS } from '../data/neighborhoods';
 import mpesaLogoImg from '../assets/images/mpesa_logo.png';
@@ -32,7 +32,6 @@ export const CheckoutModal: React.FC = () => {
   const [isAddressSectionOpen, setIsAddressSectionOpen] = useState(true);
   const [isDeliveryMethodOpen, setIsDeliveryMethodOpen] = useState(true);
   const [isDeliveryDateOpen, setIsDeliveryDateOpen] = useState(true);
-  const [isPaymentSectionOpen, setIsPaymentSectionOpen] = useState(true);
 
   const today = new Date();
   const todayDateStr = today.toLocaleDateString('en-US', {
@@ -184,15 +183,13 @@ export const CheckoutModal: React.FC = () => {
           <div className="overflow-y-auto flex-1 px-4 pt-2.5 pb-4 sm:px-6 sm:pt-3 sm:pb-5 space-y-4">
           {/* Section: Delivery Location */}
           <div className="space-y-3">
-            {/* Delivery Container */}
-            <div className="bg-stone-50/80 border border-stone-200/90 rounded-2xl shadow-2xs p-3.5 sm:p-4 space-y-3">
-              {/* Main Container Header - No chevron */}
-              <div className="flex items-center gap-2 min-w-0 pb-1.5 border-b border-stone-200/70">
-                <Bike className="w-4 h-4 text-[#173b28] shrink-0" />
-                <span className="text-xs font-bold text-stone-900 uppercase tracking-wider shrink-0">
-                  Delivery
-                </span>
-              </div>
+            {/* Main Container Header - No chevron */}
+            <div className="flex items-center gap-2 min-w-0 pb-1.5 border-b border-stone-200/70">
+              <Bike className="w-4 h-4 text-[#173b28] shrink-0" />
+              <span className="text-xs font-bold text-stone-900 uppercase tracking-wider shrink-0">
+                Delivery
+              </span>
+            </div>
 
               {/* Section 1: Delivery Location Details */}
               <div className="space-y-1.5 pb-2.5 border-b border-stone-200/80">
@@ -340,14 +337,18 @@ export const CheckoutModal: React.FC = () => {
                           onChange={() => {
                             setDeliveryType('express');
                             setDeliverySlot(`${selectedDeliveryDate === 'today' ? 'Today' : 'Tomorrow'}, 45 mins (Express)`);
+                            setIsDeliveryDateOpen(true);
                           }}
                           className="w-4 h-4 mt-0.5 text-[#173b28] focus:ring-[#173b28] accent-[#173b28] cursor-pointer shrink-0"
                         />
                         <div className="flex flex-col leading-tight">
-                          <span className={`text-xs font-semibold ${deliveryType === 'express' ? 'text-stone-900' : 'text-stone-700'}`}>
-                            Express
-                          </span>
-                          <span className="text-[11px] font-mono text-stone-500 font-medium">
+                          <div className="flex items-center gap-1.5">
+                            <Zap className={`w-3.5 h-3.5 ${deliveryType === 'express' ? 'text-amber-500 fill-amber-500' : 'text-stone-400'}`} />
+                            <span className={`text-xs font-semibold ${deliveryType === 'express' ? 'text-stone-900' : 'text-stone-700'}`}>
+                              Express
+                            </span>
+                          </div>
+                          <span className="text-[11px] font-mono text-stone-500 font-medium pl-5">
                             KES 350
                           </span>
                         </div>
@@ -362,14 +363,18 @@ export const CheckoutModal: React.FC = () => {
                           onChange={() => {
                             setDeliveryType('scheduled');
                             setDeliverySlot(`${selectedDeliveryDate === 'today' ? 'Today' : 'Tomorrow'} (${selectedTimeWindow})`);
+                            setIsDeliveryDateOpen(true);
                           }}
                           className="w-4 h-4 mt-0.5 text-[#173b28] focus:ring-[#173b28] accent-[#173b28] cursor-pointer shrink-0"
                         />
                         <div className="flex flex-col leading-tight">
-                          <span className={`text-xs font-semibold ${deliveryType === 'scheduled' ? 'text-stone-900' : 'text-stone-700'}`}>
-                            Scheduled
-                          </span>
-                          <span className="text-[11px] font-mono text-stone-500 font-medium">
+                          <div className="flex items-center gap-1.5">
+                            <Clock className={`w-3.5 h-3.5 ${deliveryType === 'scheduled' ? 'text-[#173b28]' : 'text-stone-400'}`} />
+                            <span className={`text-xs font-semibold ${deliveryType === 'scheduled' ? 'text-stone-900' : 'text-stone-700'}`}>
+                              Scheduled
+                            </span>
+                          </div>
+                          <span className="text-[11px] font-mono text-stone-500 font-medium pl-5">
                             KES 200
                           </span>
                         </div>
@@ -417,14 +422,14 @@ export const CheckoutModal: React.FC = () => {
                             setDeliverySlot(`Today (${selectedTimeWindow})`);
                           }
                         }}
-                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col gap-0.5 ${
+                        className={`py-1.5 px-2.5 sm:py-2 sm:px-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-center gap-0.5 ${
                           selectedDeliveryDate === 'today'
                             ? 'border-[#173b28] bg-[#EBF5ED] text-[#173b28] ring-1 ring-[#173b28]'
                             : 'border-stone-200 bg-white hover:bg-stone-50 text-stone-700'
                         }`}
                       >
-                        <span className="text-xs font-bold">Today</span>
-                        <span className="text-[11px] font-medium opacity-80">{todayDateStr}</span>
+                        <span className="text-xs font-bold leading-tight">Today</span>
+                        <span className="text-[11px] font-medium opacity-80 leading-tight">{todayDateStr}</span>
                       </button>
 
                       <button
@@ -437,14 +442,14 @@ export const CheckoutModal: React.FC = () => {
                             setDeliverySlot(`Tomorrow (${selectedTimeWindow})`);
                           }
                         }}
-                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col gap-0.5 ${
+                        className={`py-1.5 px-2.5 sm:py-2 sm:px-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-center gap-0.5 ${
                           selectedDeliveryDate === 'tomorrow'
                             ? 'border-[#173b28] bg-[#EBF5ED] text-[#173b28] ring-1 ring-[#173b28]'
                             : 'border-stone-200 bg-white hover:bg-stone-50 text-stone-700'
                         }`}
                       >
-                        <span className="text-xs font-bold">Tomorrow</span>
-                        <span className="text-[11px] font-medium opacity-80">{tomorrowDateStr}</span>
+                        <span className="text-xs font-bold leading-tight">Tomorrow</span>
+                        <span className="text-[11px] font-medium opacity-80 leading-tight">{tomorrowDateStr}</span>
                       </button>
                     </div>
 
@@ -483,79 +488,64 @@ export const CheckoutModal: React.FC = () => {
                 )}
               </div>
 
-              {/* Section 4: M-Pesa Number Input Area */}
+              {/* Section 4: M-Pesa Number Input Area (Always Expanded) */}
               <div className="space-y-1.5 pt-0.5">
-                <button
-                  type="button"
-                  onClick={() => setIsPaymentSectionOpen(!isPaymentSectionOpen)}
-                  className="w-full text-left cursor-pointer group select-none flex flex-col gap-1"
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-bold text-stone-900">
-                        M-Pesa Number
-                      </span>
-                      <span className="text-[11px] text-stone-400 font-medium">· Safaricom</span>
-                    </div>
-                    <ChevronDown className={`w-3.5 h-3.5 text-stone-500 group-hover:text-stone-800 transition-transform duration-200 ${isPaymentSectionOpen ? 'rotate-180' : ''}`} />
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-stone-900">
+                      M-Pesa Number
+                    </span>
+                    <span className="text-[11px] text-stone-400 font-medium">· Safaricom</span>
                   </div>
-                  {!isPaymentSectionOpen && (
-                    <div className="text-[11px] text-stone-600 font-medium font-mono animate-in fade-in duration-150">
-                      {phone || '07XX XXX XXX'}
-                    </div>
-                  )}
-                </button>
+                </div>
 
-                {isPaymentSectionOpen && (
-                  <div className="space-y-2 pt-1 animate-in fade-in duration-150">
-                    <div className="flex items-center gap-2">
-                      <div className="relative flex-1 flex items-center min-w-0 h-11">
-                        {/* Leading official M-Pesa Logo - covers full height */}
-                        <div className="absolute left-1 inset-y-1 flex items-center pointer-events-none shrink-0 z-10 overflow-hidden rounded-lg">
-                          <img 
-                            src={mpesaLogoImg} 
-                            alt="M-Pesa" 
-                            className="h-full w-auto object-contain"
-                          />
-                        </div>
-
-                        {/* Phone Number Input */}
-                        <input
-                          type="tel"
-                          value={phone}
-                          onChange={(e) => setPhone(e.target.value)}
-                          placeholder="07XX XXX XXX"
-                          required
-                          className="w-full h-full bg-white border border-stone-200/90 hover:border-[#009A44]/60 focus:border-[#009A44] focus:ring-2 focus:ring-[#009A44]/20 rounded-xl pl-[96px] sm:pl-[102px] pr-3 text-xs sm:text-sm font-semibold text-stone-900 placeholder-stone-400 shadow-2xs transition-all outline-none"
+                <div className="space-y-2 pt-1 animate-in fade-in duration-150">
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1 flex items-center min-w-0 h-11">
+                      {/* Leading official M-Pesa Logo - fits container height without overflow */}
+                      <div className="absolute left-1.5 inset-y-1 flex items-center pointer-events-none shrink-0 z-10">
+                        <img 
+                          src={mpesaLogoImg} 
+                          alt="M-Pesa" 
+                          className="h-full w-auto object-contain max-h-full"
                         />
                       </div>
 
-                      {/* Send OTP button to initiate the push - matches input height */}
-                      <button
-                        type="button"
-                        onClick={handleSubmit}
-                        disabled={isProcessing}
-                        className="h-11 px-3 sm:px-3.5 bg-[#009A44] hover:bg-[#00823a] active:scale-95 text-white text-[11px] sm:text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer shrink-0 disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap"
-                        title="Send OTP to initiate M-Pesa STK push"
-                      >
-                        {isProcessing ? (
-                          <>
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            <span>Sending...</span>
-                          </>
-                        ) : (
-                          <span>Send OTP</span>
-                        )}
-                      </button>
+                      {/* Phone Number Input */}
+                      <input
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="07XX XXX XXX"
+                        required
+                        className="w-full h-full bg-white border border-stone-200/90 hover:border-[#009A44]/60 focus:border-[#009A44] focus:ring-2 focus:ring-[#009A44]/20 rounded-xl pl-20 sm:pl-[86px] pr-3 text-xs sm:text-sm font-semibold text-stone-900 placeholder-stone-400 shadow-2xs transition-all outline-none"
+                      />
                     </div>
 
-                    <p className="text-[11px] text-stone-500 leading-tight">
-                      Instant STK push prompt will be sent to <strong className="text-stone-700 font-semibold">{phone || 'your phone'}</strong>. Enter PIN to confirm.
-                    </p>
+                    {/* Send OTP button to initiate the push - slightly shorter */}
+                    <button
+                      type="button"
+                      onClick={handleSubmit}
+                      disabled={isProcessing}
+                      className="h-9 sm:h-9.5 px-3 bg-[#009A44] hover:bg-[#00823a] active:scale-95 text-white text-[11px] sm:text-xs font-bold rounded-lg shadow-xs transition-all cursor-pointer shrink-0 disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap self-center"
+                      title="Send OTP to initiate M-Pesa STK push"
+                    >
+                      {isProcessing ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Sending...</span>
+                        </>
+                      ) : (
+                        <span>Send OTP</span>
+                      )}
+                    </button>
                   </div>
-                )}
+
+                  <p className="text-[11px] text-stone-500 leading-tight">
+                    Instant STK push prompt will be sent to <strong className="text-stone-700 font-semibold">{phone || 'your phone'}</strong>. Enter PIN to confirm.
+                  </p>
+                </div>
               </div>
-            </div>
           </div>
 
           {/* Interactive M-Pesa STK Push Simulation Overlay */}
@@ -593,19 +583,23 @@ export const CheckoutModal: React.FC = () => {
 
           {/* Sticky Elevated Footer - Always Visible */}
           <div className="sticky bottom-0 z-30 bg-white/98 backdrop-blur-md border-t border-stone-200/90 p-4 sm:px-6 shadow-[0_-8px_25px_rgba(0,0,0,0.08)] space-y-3">
-            {/* In a row: Order total: and Delivery: separated by a divider with closer values */}
-            <div className="flex items-center justify-center gap-4 sm:gap-6 py-0.5">
-              <div className="flex items-center gap-1.5">
-                <span className="text-sm sm:text-base font-semibold text-stone-700">Order total:</span>
-                <span className="text-sm sm:text-base font-bold text-stone-950 font-mono">
+            {/* Order and delivery fee with divider */}
+            <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 py-1 text-base sm:text-lg">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="font-semibold text-stone-700">Order:</span>
+                <span className="font-bold text-stone-950 font-mono">
                   KES {cartSubtotal.toLocaleString()}
                 </span>
               </div>
-              <div className="h-4 sm:h-5 w-px bg-stone-300" aria-hidden="true" />
-              <div className="flex items-center gap-1.5">
-                <span className="text-sm sm:text-base font-semibold text-stone-700">Delivery:</span>
-                <span className="text-sm sm:text-base font-bold text-stone-950 font-mono">
-                  {effectiveDeliveryFee === 0 ? 'Free' : `KES ${effectiveDeliveryFee.toLocaleString()}`}
+              <span className="h-5 sm:h-6 w-px bg-stone-300" aria-hidden="true" />
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="font-semibold text-stone-700">Delivery fee:</span>
+                <span className="font-bold text-stone-950 font-mono">
+                  {effectiveDeliveryFee === 0 ? (
+                    <span className="text-[#173b28] font-bold">Free</span>
+                  ) : (
+                    `KES ${effectiveDeliveryFee.toLocaleString()}`
+                  )}
                 </span>
               </div>
             </div>

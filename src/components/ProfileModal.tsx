@@ -6,7 +6,12 @@ import {
   Mail, 
   ShieldCheck, 
   LogOut,
-  Loader2
+  Loader2,
+  PackageCheck,
+  ChevronRight,
+  UserCheck,
+  LogIn,
+  User
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 
@@ -19,7 +24,11 @@ export const ProfileModal: React.FC = () => {
     setIsNeighborhoodModalOpen,
     currentUser,
     signInWithGoogle,
-    signOut
+    signOut,
+    orders,
+    setViewMode,
+    setActiveTrackOrder,
+    setActiveMobileTab
   } = useStore();
 
   const [isLoadingGoogle, setIsLoadingGoogle] = useState(false);
@@ -30,6 +39,10 @@ export const ProfileModal: React.FC = () => {
     setIsLoadingGoogle(true);
     try {
       await signInWithGoogle();
+      setIsProfileOpen(false);
+      setViewMode('profile');
+      setActiveMobileTab('profile');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setIsLoadingGoogle(false);
     }
@@ -37,6 +50,15 @@ export const ProfileModal: React.FC = () => {
 
   const handleSignOut = async () => {
     await signOut();
+  };
+
+  const handleViewOrders = () => {
+    setIsProfileOpen(false);
+    setViewMode('orders');
+    if (orders.length > 0) {
+      setActiveTrackOrder(orders[0]);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
@@ -48,13 +70,23 @@ export const ProfileModal: React.FC = () => {
         {/* Header */}
         <div className="px-5 py-4 border-b border-stone-200/80 flex items-center justify-between">
           <div>
-            <h3 className="font-display font-bold text-base text-stone-900 tracking-tight">
-              Account settings
+            <h3 className="font-display font-bold text-base text-stone-900 tracking-tight flex items-center gap-2">
+              {currentUser ? (
+                <>
+                  <User className="w-4.5 h-4.5 text-[#173b28] shrink-0" />
+                  <span>Account settings</span>
+                </>
+              ) : (
+                <>
+                  <LogIn className="w-4.5 h-4.5 text-[#173b28] shrink-0" />
+                  <span>Signup/Sign in</span>
+                </>
+              )}
             </h3>
             <p className="text-xs text-stone-500">
               {currentUser 
                 ? 'Account settings, delivery details & preferences'
-                : 'Sign in or create your farm-fresh account'}
+                : 'Sign in or create your savannah account'}
             </p>
           </div>
 
@@ -77,16 +109,13 @@ export const ProfileModal: React.FC = () => {
                   S
                 </div>
 
-                <div className="space-y-1">
+                <div>
                   <h4 className="font-display font-bold text-base text-stone-900">
                     Join Savannah Fresh
                   </h4>
-                  <p className="text-xs text-stone-600 max-w-xs mx-auto leading-relaxed">
-                    Signup to save preferences
-                  </p>
                 </div>
 
-                {/* Google Sign Up CTA Button */}
+                {/* Primary Google Sign In Button */}
                 <button
                   type="button"
                   onClick={handleGoogleSignup}
@@ -107,35 +136,6 @@ export const ProfileModal: React.FC = () => {
                 </button>
               </div>
 
-              {/* Current Neighborhood for Guest */}
-              <div className="p-3.5 bg-white rounded-xl border border-stone-200 space-y-1.5">
-                <div className="text-[10px] uppercase tracking-wider text-stone-400 font-semibold">
-                  Delivery Destination
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-xs text-stone-800 min-w-0 pr-2">
-                    <MapPin className="w-4 h-4 text-[#173b28] shrink-0" />
-                    <div className="min-w-0">
-                      <div className="font-semibold text-stone-900 truncate">
-                        {selectedNeighborhood.name}, Nairobi
-                      </div>
-                      <div className="text-[11px] text-stone-500 truncate">
-                        Estimated delivery: {selectedNeighborhood.minMins}-{selectedNeighborhood.maxMins} mins
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsProfileOpen(false);
-                      setIsNeighborhoodModalOpen(true);
-                    }}
-                    className="text-xs font-semibold text-[#173b28] hover:underline cursor-pointer shrink-0"
-                  >
-                    Change
-                  </button>
-                </div>
-              </div>
             </div>
           ) : (
             /* Signed In View */
@@ -166,8 +166,15 @@ export const ProfileModal: React.FC = () => {
                     </span>
                   </div>
 
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200/60">
+                      <UserCheck className="w-2.5 h-2.5" />
+                      Google Connected
+                    </span>
+                  </div>
+
                   {currentUser.phone && (
-                    <div className="text-xs text-stone-500 flex items-center gap-1 mt-0.5 font-mono">
+                    <div className="text-xs text-stone-500 flex items-center gap-1 mt-1 font-mono">
                       <Phone className="w-3 h-3 text-stone-400" />
                       <span>{currentUser.phone}</span>
                     </div>
@@ -212,6 +219,24 @@ export const ProfileModal: React.FC = () => {
                 </div>
               </div>
 
+              {/* Quick Action: Orders */}
+              <button
+                type="button"
+                onClick={handleViewOrders}
+                className="w-full p-3.5 bg-white hover:bg-stone-50 rounded-xl border border-stone-200 flex items-center justify-between transition-colors cursor-pointer text-left shadow-2xs"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#173b28] flex items-center justify-center">
+                    <PackageCheck className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-stone-900">Past Orders &amp; Tracking</div>
+                    <div className="text-[11px] text-stone-500">{orders.length} order{orders.length === 1 ? '' : 's'} recorded</div>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-stone-400" />
+              </button>
+
               {/* Sign Out */}
               <div className="pt-2 text-center space-y-2">
                 <button
@@ -225,12 +250,6 @@ export const ProfileModal: React.FC = () => {
               </div>
             </>
           )}
-        </div>
-
-        {/* Footer */}
-        <div className="px-5 py-3 border-t border-stone-200/80 flex items-center justify-between text-[11px] text-stone-400">
-          <span>Safe &amp; Encrypted Session</span>
-          <span>v2.4</span>
         </div>
       </div>
     </div>

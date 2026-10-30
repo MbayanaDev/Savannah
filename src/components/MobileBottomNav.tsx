@@ -22,7 +22,8 @@ export const MobileBottomNav: React.FC = () => {
     if (tab === 'cart') {
       setIsCartOpen(true);
     } else if (tab === 'profile') {
-      setIsProfileOpen(true);
+      setViewMode('profile');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (tab === 'orders') {
       setViewMode('orders');
       if (orders.length > 0) {
@@ -106,11 +107,11 @@ export const MobileBottomNav: React.FC = () => {
           <span className="text-[10px] tracking-tight mt-1">Orders</span>
         </button>
 
-        {/* Tab 5: Profile (replacing Hub) */}
+        {/* Tab 5: Profile */}
         <button
           onClick={() => handleTabClick('profile')}
           className={`flex flex-col items-center justify-center min-h-[48px] py-1 transition-colors cursor-pointer ${
-            activeMobileTab === 'profile' || isProfileOpen
+            activeMobileTab === 'profile' || viewMode === 'profile' || isProfileOpen
               ? 'text-[#173b28] font-semibold'
               : 'text-stone-500 hover:text-stone-800'
           }`}

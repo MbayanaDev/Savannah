@@ -1,6 +1,6 @@
 export type Category = 'All' | 'Veg' | 'Fruits' | 'Aromatics' | string;
 
-export type ViewMode = 'store' | 'admin' | 'about' | 'faqs' | 'purpose' | 'privacy' | 'terms' | 'refunds' | 'blog' | 'arcana' | 'orders';
+export type ViewMode = 'store' | 'admin' | 'about' | 'faqs' | 'purpose' | 'privacy' | 'terms' | 'refunds' | 'blog' | 'arcana' | 'orders' | 'profile';
 
 export interface CategoryInfo {
   id: Category;

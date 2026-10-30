@@ -247,13 +247,19 @@ export const Header: React.FC = () => {
               </button>
             )}
 
-            {/* Account / Profile Button (Store view only) */}
+            {/* Account / Profile Button */}
             {viewMode !== 'orders' && (
               <button
-                onClick={() => setIsProfileOpen(true)}
-                className="hidden sm:flex items-center justify-center w-8 h-8 rounded-lg text-stone-800 hover:bg-stone-200/60 active:scale-95 transition-all cursor-pointer"
-                aria-label="Account settings"
-                title={currentUser ? currentUser.name : 'Account settings & Sign in'}
+                onClick={() => {
+                  setViewMode('profile');
+                  setActiveMobileTab('profile');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className={`hidden sm:flex items-center justify-center w-8 h-8 rounded-lg text-stone-800 hover:bg-stone-200/60 active:scale-95 transition-all cursor-pointer ${
+                  viewMode === 'profile' ? 'bg-stone-200/80 ring-1 ring-stone-300' : ''
+                }`}
+                aria-label="Account Profile"
+                title={currentUser ? currentUser.name : 'Account Profile'}
               >
                 {currentUser?.avatarUrl ? (
                   <img src={currentUser.avatarUrl} alt={currentUser.name} className="w-5 h-5 rounded-full object-cover" />
