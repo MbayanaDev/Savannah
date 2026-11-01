@@ -81,7 +81,11 @@ export const ProductDetailModal: React.FC = () => {
   const isOutOfStock = activeStock <= 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+      onClick={() => setSelectedProductDetail(null)}
+      onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
+    >
       <div 
         className="relative w-full max-w-2xl bg-white rounded-3xl overflow-hidden shadow-2xl border border-stone-200 max-h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
@@ -96,7 +100,7 @@ export const ProductDetailModal: React.FC = () => {
         </button>
 
         {/* Scrollable Modal Body */}
-        <div className="overflow-y-auto flex-1 p-0">
+        <div className="overflow-y-auto overscroll-contain flex-1 p-0">
           {/* Image Header */}
           <div className="relative aspect-[16/10] sm:aspect-[2/1] w-full bg-stone-100 overflow-hidden">
             <img
@@ -290,13 +294,15 @@ export const ProductDetailModal: React.FC = () => {
                 approx {approxCount} pcs
               </div>
             )}
-            {activeCompareAtPrice != null && activeCompareAtPrice > 0 && (
-              <div className="text-xs sm:text-sm font-mono text-stone-400 line-through tabular-nums leading-none mt-0.5">
-                KES {activeCompareAtPrice.toLocaleString()}
-              </div>
-            )}
-            <div className="font-mono text-2xl sm:text-3xl font-extrabold text-stone-900 tabular-nums tracking-tight">
-              KES {activePrice.toLocaleString()}
+            <div className="flex items-baseline flex-wrap gap-2 mt-0.5">
+              {activeCompareAtPrice != null && activeCompareAtPrice > 0 && (
+                <span className="text-sm sm:text-base font-mono text-stone-400 line-through tabular-nums leading-none">
+                  KES {activeCompareAtPrice.toLocaleString()}
+                </span>
+              )}
+              <span className="font-mono text-2xl sm:text-3xl font-extrabold text-stone-900 tabular-nums tracking-tight">
+                KES {activePrice.toLocaleString()}
+              </span>
             </div>
           </div>
 

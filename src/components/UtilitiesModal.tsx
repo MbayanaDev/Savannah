@@ -147,7 +147,14 @@ export const UtilitiesModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+      onClick={() => {
+        setIsUtilitiesModalOpen(false);
+        setActiveReceipt(null);
+      }}
+      onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
+    >
       <div 
         className="relative w-full max-w-md bg-[#FCFBF8] rounded-2xl overflow-hidden shadow-2xl border border-stone-200 max-h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
@@ -176,7 +183,7 @@ export const UtilitiesModal: React.FC = () => {
         </div>
 
         {/* Modal Body */}
-        <div className="overflow-y-auto flex-1 p-5 space-y-4">
+        <div className="overflow-y-auto overscroll-contain flex-1 p-5 space-y-4">
           {/* RECEIPT VIEW */}
           {activeReceipt ? (
             <div className="space-y-4 animate-in zoom-in-95 duration-200">

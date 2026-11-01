@@ -1,30 +1,38 @@
 {
+  "id": "/",
   "name": "Savannah Fresh Nairobi - Fresh Farm Produce & Artisan Grocer",
-  "short_name": "Savannah Fresh",
+  "short_name": "Savannah",
   "description": "Farm-fresh organic produce, highland fruits, artisanal bakery, and pasture-fed dairy delivered fast across Nairobi.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#FBF9F5",
   "theme_color": "#173b28",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/savannah_icon.png",
+      "sizes": "192x192 512x512 1024x1024",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-192.svg",
-      "sizes": "192x192",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "src": "/savannah_icon.png",
+      "sizes": "192x192 512x512 1024x1024",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
-      "src": "/icons/icon-512.svg",
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }

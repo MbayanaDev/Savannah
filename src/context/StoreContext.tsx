@@ -55,6 +55,7 @@ interface StoreContextType {
     mpesaCode?: string;
   }) => Promise<Order>;
   updateOrderStatus: (orderId: string, status: OrderStatus, riderDetails?: { riderName: string; riderPhone: string; riderVehicle: string }) => void;
+  deleteOrder: (orderId: string) => void;
   confirmOrderPayment: (orderId: string, mpesaCode: string) => void;
   updateProductStock: (productId: string, newStock: number) => void;
   updateProductPrice: (productId: string, newPrice: number) => void;
@@ -87,8 +88,17 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Products state (saved to localStorage for persistence across reloads)
   const [products, setProducts] = useState<Product[]>(() => {
     try {
-      const saved = localStorage.getItem('savannah_products_v3');
-      if (saved) return JSON.parse(saved);
+      const saved = localStorage.getItem('savannah_products_v4');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Keep product 0 image in sync with latest assets
+          if (parsed[0]?.id === INITIAL_PRODUCTS[0].id) {
+            parsed[0].image = INITIAL_PRODUCTS[0].image;
+          }
+          return parsed;
+        }
+      }
     } catch (e) {
       console.error(e);
     }
@@ -201,11 +211,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Orders
   const [orders, setOrders] = useState<Order[]>(() => {
     try {
-      const saved = localStorage.getItem('savannah_orders');
+      const saved = localStorage.getItem('savannah_orders_v4');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length >= SEED_ORDERS.length) {
-          return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const filtered = parsed.filter((o: any) => o.id !== 'SF-89209' && o.id !== 'SF-89208');
+          localStorage.setItem('savannah_orders_v4', JSON.stringify(filtered));
+          return filtered;
         }
       }
     } catch (e) {
@@ -213,6 +225,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
     return SEED_ORDERS;
   });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('savannah_orders_v4', JSON.stringify(orders));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [orders]);
 
   // Filters & Navigation
   const [selectedCategory, setSelectedCategoryState] = useState<Category>('All');
@@ -513,7 +533,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Sync to localStorage
   useEffect(() => {
     try {
-      localStorage.setItem('savannah_products_v3', JSON.stringify(products));
+      localStorage.setItem('savannah_products_v4', JSON.stringify(products));
     } catch (e) {
       console.error(e);
     }
@@ -713,6 +733,21 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     showToast(`Order #${orderId} marked as ${status.replace('_', ' ')}`);
   };
 
+  // Delete / Remove order
+  const deleteOrder = (orderId: string) => {
+    setOrders(prev => {
+      const updated = prev.filter(order => order.id !== orderId);
+      try {
+        localStorage.setItem('savannah_orders_v4', JSON.stringify(updated));
+      } catch (e) {
+        console.error(e);
+      }
+      return updated;
+    });
+    setActiveTrackOrder(curr => (curr && curr.id === orderId ? null : curr));
+    showToast(`Order #${orderId} removed`, 'info');
+  };
+
   // Confirm order M-Pesa payment
   const confirmOrderPayment = (orderId: string, mpesaCode: string) => {
     const validCode = mpesaCode.trim().toUpperCase() || `QKM${Math.floor(10000000 + Math.random() * 90000000)}WA`;
@@ -815,6 +850,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         orders,
         createOrder,
         updateOrderStatus,
+        deleteOrder,
         confirmOrderPayment,
         updateProductStock,
         updateProductPrice,

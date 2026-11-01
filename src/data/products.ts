@@ -1,4 +1,5 @@
 import { Product, Category, CategoryInfo } from '../types';
+import arcanaDoorImg from '../assets/images/arcana_door.png';
 
 export const CATEGORIES_CONFIG: CategoryInfo[] = [
   {
@@ -113,7 +114,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     unit: '800g medium bunch',
     stock: 24,
     lowStockThreshold: 5,
-    image: 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?auto=format&fit=crop&w=800&q=80',
+    image: arcanaDoorImg,
     harvestTime: 'Picked fresh ripe today',
     organicCertified: true,
     description: 'Ripe Cavendish Bananas medium bunch. Golden sweet, rich in potassium, naturally sun-ripened without artificial chemicals.',

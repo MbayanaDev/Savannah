@@ -1,22 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Menu, 
   X, 
   ShoppingBag, 
   MapPin, 
   ChevronRight, 
-  PackageCheck, 
   Phone,
   Search,
   SlidersHorizontal,
   User,
   Truck
 } from 'lucide-react';
-import { MajesticDoorIcon } from './icons/MajesticDoorIcon';
 import { useStore } from '../context/StoreContext';
 import { Category } from '../types';
 import { CATEGORIES_CONFIG, SUBCATEGORIES_CONFIG } from '../data/products';
 import { SEED_ORDERS } from '../data/seedOrders';
+import savannahLogo from '../assets/images/savannah_logo.png';
+import profileImg from '../assets/images/profile.png';
+import ordersImg from '../assets/images/orders.png';
+import arcanaDoorImg from '../assets/images/arcana_door.png';
+import { useBodyScrollLock } from '../utils/scrollLock';
+import { PWAInstallButton } from './PWAInstallButton';
 
 const DRAWER_BANNERS = [
   {
@@ -81,33 +85,25 @@ export const Header: React.FC = () => {
   } = useStore();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [showSubcategoriesInHeader, setShowSubcategoriesInHeader] = useState(false);
+  useBodyScrollLock(isMenuOpen);
+  const [isNavPaused, setIsNavPaused] = useState(false);
+  const resumeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      const subcatEl = document.getElementById('subcategories-bar');
-      const headerNavEl = document.getElementById('header-nav-bar');
-      if (!subcatEl) {
-        setShowSubcategoriesInHeader(false);
-        return;
-      }
-      const headerBottom = headerNavEl
-        ? headerNavEl.getBoundingClientRect().bottom
-        : 95;
-      const subcatTop = subcatEl.getBoundingClientRect().top;
-      // When the subcategories are upscrolled and reach the categories header row
-      setShowSubcategoriesInHeader(subcatTop <= headerBottom);
-    };
+  const handleNavInteractionStart = () => {
+    setIsNavPaused(true);
+    if (resumeTimeoutRef.current) {
+      clearTimeout(resumeTimeoutRef.current);
+    }
+  };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('resize', handleScroll, { passive: true });
-    handleScroll();
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('resize', handleScroll);
-    };
-  }, [selectedCategory]);
+  const handleNavInteractionEnd = () => {
+    if (resumeTimeoutRef.current) {
+      clearTimeout(resumeTimeoutRef.current);
+    }
+    resumeTimeoutRef.current = setTimeout(() => {
+      setIsNavPaused(false);
+    }, 1200);
+  };
 
   const [currentDrawerBanner, setCurrentDrawerBanner] = useState(0);
 
@@ -118,30 +114,6 @@ export const Header: React.FC = () => {
     }, 3500);
     return () => clearInterval(interval);
   }, [isMenuOpen]);
-
-  const activeSubcategories = selectedCategory === 'All'
-    ? subcategoriesList
-    : subcategoriesList.filter(sub => 
-        sub.category === selectedCategory || 
-        sub.categoryId === selectedCategory ||
-        (selectedCategory === 'Veg' && (
-          sub.categoryId === 'd54bb4bf-9351-4b65-be84-8fe4c6c5e007' ||
-          sub.slug === 'cooking-staples' || 
-          sub.slug === 'salads-crunchy-greens' || 
-          sub.slug === 'staple-greens' || 
-          sub.slug === 'pods-legumes'
-        )) ||
-        (selectedCategory === 'Fruits' && (
-          sub.slug === 'tropical-staples' || 
-          sub.slug === 'citrus-juicing' || 
-          sub.slug === 'orchard-berries'
-        )) ||
-        (selectedCategory === 'Aromatics' && (
-          sub.categoryId === 'a2c5bba0-1bdb-44d9-8fbf-c7c08ab450e7' ||
-          sub.slug === 'fresh-aromatics' || 
-          sub.slug === 'fresh-herbs'
-        ))
-      );
 
   const shopperName = currentUser?.name
     ? currentUser.name.trim().split(' ')[0]
@@ -178,11 +150,24 @@ export const Header: React.FC = () => {
     setIsNeighborhoodModalOpen(true);
   };
 
+  // Base categories duplicated for seamless infinite autoscroll
+  const baseCategories = categoriesList.length > 0 ? categoriesList : CATEGORIES_CONFIG;
+  const infiniteCategories = [
+    ...baseCategories,
+    ...baseCategories,
+    ...baseCategories,
+    ...baseCategories
+  ];
+
   return (
     <>
-      <header className="sticky top-0 z-30 bg-[#FBF9F5]/98 backdrop-blur-md border-b border-stone-200/90 shadow-2xs w-full max-w-full overflow-x-clip">
+      <header className="relative w-full max-w-full overflow-x-clip bg-[#FBF9F5]">
         {/* Compact Main Header Row: Left (Hamburger) | Center (Compact Logo & Name) | Right (Cart with Badge) */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-11 sm:h-12 grid grid-cols-3 items-center">
+        <div 
+          id="header-main-row" 
+          className="sticky top-0 z-40 bg-[#FBF9F5] border-b border-stone-100 shadow-2xs w-full"
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 h-11 sm:h-12 grid grid-cols-3 items-center">
           {/* Left Column: Compact Hamburger Menu Button */}
           <div className="flex items-center justify-start">
             <button
@@ -205,8 +190,8 @@ export const Header: React.FC = () => {
                 className="flex items-center gap-1.5 cursor-pointer text-center group"
                 title="Orders"
               >
-                <div className="w-6 h-6 rounded-md bg-[#173b28] flex items-center justify-center text-white shadow-2xs">
-                  <PackageCheck className="w-3.5 h-3.5" />
+                <div className="w-6 h-6 rounded-md bg-stone-100 border border-stone-200/90 flex items-center justify-center shadow-2xs overflow-hidden">
+                  <img src={ordersImg} alt="Orders" className="w-full h-full object-cover" />
                 </div>
                 <span className="font-display font-extrabold text-sm sm:text-base text-[#173b28] tracking-tight whitespace-nowrap flex items-center gap-1.5">
                   <span>Orders</span>
@@ -221,14 +206,14 @@ export const Header: React.FC = () => {
                   setViewMode('store');
                   setActiveMobileTab('shop');
                 }}
-                className="flex items-center gap-1.5 group cursor-pointer text-center"
+                className="flex items-center justify-center group cursor-pointer text-center py-0 my-0 focus:outline-none"
+                aria-label="Savannah Fresh"
               >
-                <div className="w-6 h-6 rounded-md bg-[#173b28] flex items-center justify-center text-white font-bold text-xs shadow-2xs group-hover:scale-105 transition-transform">
-                  S
-                </div>
-                <span className="font-display font-extrabold text-sm sm:text-base text-[#173b28] tracking-tight whitespace-nowrap">
-                  Savannah Fresh
-                </span>
+                <img
+                  src={savannahLogo}
+                  alt="Savannah Fresh"
+                  className="h-[36px] sm:h-[42px] md:h-[44px] max-h-full w-auto max-w-[175px] sm:max-w-[220px] md:max-w-[250px] object-contain group-hover:scale-105 transition-transform"
+                />
               </button>
             )}
           </div>
@@ -264,7 +249,7 @@ export const Header: React.FC = () => {
                 {currentUser?.avatarUrl ? (
                   <img src={currentUser.avatarUrl} alt={currentUser.name} className="w-5 h-5 rounded-full object-cover" />
                 ) : (
-                  <User className="w-4 h-4 text-stone-700" />
+                  <img src={profileImg} alt="Account Profile" className="w-5 h-5 rounded-full object-cover" />
                 )}
               </button>
             )}
@@ -296,10 +281,14 @@ export const Header: React.FC = () => {
             )}
           </div>
         </div>
+      </div>
 
-        {/* Search Container: Search bar */}
+        {/* Search Container: Search bar - Sticky right beneath top row */}
         {viewMode === 'store' && (
-          <div className="pb-1 pt-0.5">
+          <div 
+            id="header-search-bar" 
+            className="sticky top-11 sm:top-12 z-40 bg-[#FBF9F5] border-b border-stone-200/90 shadow-2xs pb-1 pt-0.5 w-full"
+          >
             <div className="max-w-7xl mx-auto px-4 mb-0.5">
               <div className="relative w-full">
                 <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -324,138 +313,65 @@ export const Header: React.FC = () => {
           </div>
         )}
 
-        {/* Row of Fresh Categories replacing the previous live feed row - Replaced by subcategories when upscrolled */}
+        {/* Row of Fresh Categories - Category container that moves with the scroll */}
         {viewMode === 'store' && (
-          <div id="header-nav-bar" className="bg-[#FBF9F5] border-t border-stone-200/80 overflow-x-auto scrollbar-none pt-1 pb-1 px-3 sm:px-6 transition-all duration-200">
-            {!showSubcategoriesInHeader ? (
-              <div className="max-w-7xl mx-auto flex items-center justify-center gap-4 sm:gap-6 md:gap-8 whitespace-nowrap animate-in fade-in duration-200">
-                {categoriesList.map((cat) => {
-                  const isActive = selectedCategory === cat.id;
-                  return (
-                    <button
-                      key={cat.id}
-                      onClick={() => handleNavClick(cat.id)}
-                      className="flex flex-col items-center gap-1 cursor-pointer shrink-0 group focus:outline-none transition-all pt-0.5 pb-0.5 px-1 bg-transparent"
-                    >
-                      <img
-                        src={
-                          cat.id === 'All' || cat.label?.toLowerCase() === 'all' || cat.slug === 'all'
-                            ? '/icons/categories/all.png'
-                            : (cat.image || '/icons/categories/all.png')
-                        }
-                        alt={cat.label}
-                        className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover shrink-0 transition-transform duration-200 group-hover:scale-105 ${
-                          isActive
-                            ? 'ring-2 ring-[#173b28] ring-offset-2 shadow-xs'
-                            : 'opacity-90 group-hover:opacity-100'
-                        }`}
-                        onError={(e) => {
-                          const target = e.currentTarget;
-                          if (!target.dataset.fallbackTried) {
-                            target.dataset.fallbackTried = '1';
-                            target.src = '/public/icons/categories/all.png';
-                          } else if (target.dataset.fallbackTried === '1') {
-                            target.dataset.fallbackTried = '2';
-                            target.src = '/src/assets/images/all.png';
-                          }
-                        }}
-                        referrerPolicy="no-referrer"
-                      />
-                      <span
-                        className={`text-xs sm:text-sm tracking-tight text-center transition-colors whitespace-nowrap ${
-                          isActive
-                            ? 'font-bold text-[#173b28]'
-                            : 'font-medium text-stone-700 group-hover:text-stone-900'
-                        }`}
-                      >
-                        {cat.label}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="max-w-7xl mx-auto flex items-center justify-center gap-4 sm:gap-6 md:gap-8 whitespace-nowrap animate-in fade-in duration-200">
-                {/* All subcategory in active category */}
-                <button
-                  onClick={() => {
-                    setSelectedSubcategory(null);
-                    showToast(`Showing all in ${selectedCategory}`, 'info');
-                  }}
-                  className="flex flex-col items-center gap-1 cursor-pointer shrink-0 group focus:outline-none transition-all pt-0.5 pb-0.5 px-1 bg-transparent"
-                  title="View all produce in this aisle"
-                >
-                  <img
-                    src="/icons/categories/all.png"
-                    alt="All"
-                    className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover shrink-0 transition-transform duration-200 group-hover:scale-105 ${
-                      selectedSubcategory === null
-                        ? 'ring-2 ring-[#173b28] ring-offset-2 shadow-xs'
-                        : 'opacity-90 group-hover:opacity-100'
-                    }`}
-                    onError={(e) => {
-                      const target = e.currentTarget;
-                      if (!target.dataset.fallbackTried) {
-                        target.dataset.fallbackTried = '1';
-                        target.src = '/public/icons/categories/all.png';
-                      } else if (target.dataset.fallbackTried === '1') {
-                        target.dataset.fallbackTried = '2';
-                        target.src = '/src/assets/images/all.png';
-                      }
-                    }}
-                    referrerPolicy="no-referrer"
-                  />
-                  <span
-                    className={`text-xs sm:text-sm tracking-tight text-center transition-colors whitespace-nowrap ${
-                      selectedSubcategory === null
-                        ? 'font-bold text-[#173b28]'
-                        : 'font-medium text-stone-700 group-hover:text-stone-900'
-                    }`}
+          <div
+            id="header-nav-bar"
+            onMouseEnter={handleNavInteractionStart}
+            onMouseLeave={handleNavInteractionEnd}
+            onTouchStart={handleNavInteractionStart}
+            onTouchEnd={handleNavInteractionEnd}
+            className="relative z-20 bg-[#FBF9F5] border-b border-stone-200/80 overflow-hidden py-1 px-2 sm:px-4 shadow-2xs transition-colors duration-200 select-none min-h-[88px] sm:min-h-[98px] flex items-center"
+          >
+            <div
+              className="animate-header-autoscroll flex items-center gap-3.5 sm:gap-6 md:gap-8 whitespace-nowrap px-2 sm:px-4 py-1"
+              style={{ animationPlayState: isNavPaused ? 'paused' : 'running' }}
+            >
+              {infiniteCategories.map((cat, idx) => {
+                const isActive = selectedCategory === cat.id;
+                return (
+                  <button
+                    key={`${cat.id}-${idx}`}
+                    onClick={() => handleNavClick(cat.id)}
+                    className="flex flex-col items-center gap-1 cursor-pointer shrink-0 group focus:outline-none transition-all pt-0.5 pb-0.5 px-1 bg-transparent"
                   >
-                    All {selectedCategory !== 'All' ? selectedCategory : ''}
-                  </span>
-                </button>
-
-                {/* Subcategories */}
-                {activeSubcategories.map((subcat) => {
-                  const isSelected = selectedSubcategory === subcat.id;
-                  return (
-                    <button
-                      key={subcat.id}
-                      onClick={() => {
-                        if (selectedSubcategory === subcat.id) {
-                          setSelectedSubcategory(null);
-                        } else {
-                          setSelectedSubcategory(subcat.id);
+                    <img
+                      src={
+                        cat.id === 'All' || cat.label?.toLowerCase() === 'all' || cat.slug === 'all'
+                          ? '/icons/categories/all.png'
+                          : (cat.image || '/icons/categories/all.png')
+                      }
+                      alt={cat.label}
+                      className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover shrink-0 transition-transform duration-200 group-hover:scale-105 pointer-events-none ${
+                        isActive
+                          ? 'ring-2 ring-[#173b28] ring-offset-2 shadow-xs'
+                          : 'opacity-90 group-hover:opacity-100'
+                      }`}
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        if (!target.dataset.fallbackTried) {
+                          target.dataset.fallbackTried = '1';
+                          target.src = '/public/icons/categories/all.png';
+                        } else if (target.dataset.fallbackTried === '1') {
+                          target.dataset.fallbackTried = '2';
+                          target.src = '/src/assets/images/all.png';
                         }
                       }}
-                      className="flex flex-col items-center gap-1 cursor-pointer shrink-0 group focus:outline-none transition-all pt-0.5 pb-0.5 px-1 bg-transparent"
-                      title={`Filter by ${subcat.name}`}
+                      referrerPolicy="no-referrer"
+                    />
+                    <span
+                      className={`text-xs sm:text-sm tracking-tight text-center transition-colors whitespace-nowrap ${
+                        isActive
+                          ? 'font-bold text-[#173b28]'
+                          : 'font-medium text-stone-700 group-hover:text-stone-900'
+                      }`}
                     >
-                      <img
-                        src={subcat.image}
-                        alt={subcat.name}
-                        className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover shrink-0 transition-transform duration-200 group-hover:scale-105 ${
-                          isSelected
-                            ? 'ring-2 ring-[#173b28] ring-offset-2 shadow-xs'
-                            : 'opacity-90 group-hover:opacity-100'
-                        }`}
-                        referrerPolicy="no-referrer"
-                      />
-                      <span
-                        className={`text-xs sm:text-sm tracking-tight text-center transition-colors whitespace-nowrap ${
-                          isSelected
-                            ? 'font-bold text-[#173b28]'
-                            : 'font-medium text-stone-700 group-hover:text-stone-900'
-                        }`}
-                      >
-                        {subcat.name}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+                      {cat.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
       </header>
@@ -574,8 +490,8 @@ export const Header: React.FC = () => {
                     className="w-full px-3 py-2.5 rounded-xl text-left text-xs sm:text-sm font-medium text-stone-800 hover:bg-stone-100 hover:text-[#173b28] transition-colors flex items-center justify-between cursor-pointer group"
                   >
                     <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-[#173b28] text-white flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-xs">
-                        <PackageCheck className="w-4 h-4 text-white" />
+                      <div className="w-8 h-8 rounded-xl bg-stone-100 border border-stone-200/90 text-stone-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-xs overflow-hidden">
+                        <img src={ordersImg} alt="Orders" className="w-full h-full object-cover" />
                       </div>
                       <span className="font-semibold text-stone-900">Orders</span>
                     </div>
@@ -596,8 +512,8 @@ export const Header: React.FC = () => {
                     className="w-full px-3 py-2.5 rounded-xl text-left text-xs sm:text-sm font-medium text-stone-800 hover:bg-stone-100 hover:text-[#173b28] transition-colors flex items-center justify-between cursor-pointer group"
                   >
                     <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-stone-100 border border-stone-200/90 text-stone-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-xs">
-                        <User className="w-4 h-4 text-stone-600" />
+                      <div className="w-8 h-8 rounded-xl bg-stone-100 border border-stone-200/90 text-stone-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-xs overflow-hidden">
+                        <img src={profileImg} alt="Account settings" className="w-full h-full object-cover" />
                       </div>
                       <span className="font-semibold text-stone-900">{currentUser ? 'Account settings' : 'Sign up / Log in'}</span>
                     </div>
@@ -613,8 +529,8 @@ export const Header: React.FC = () => {
                     className="w-full px-3 py-2.5 rounded-xl text-left text-xs sm:text-sm font-medium text-emerald-950 bg-gradient-to-r from-emerald-50 via-white to-amber-50/50 hover:from-emerald-100/80 hover:to-amber-100/70 transition-all flex items-center justify-between cursor-pointer border border-emerald-300/80 mt-1 shadow-2xs group"
                   >
                     <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-[#173b28] text-amber-300 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-xs">
-                        <MajesticDoorIcon className="w-4.5 h-4.5 text-amber-300" />
+                      <div className="w-8 h-8 rounded-xl bg-stone-100 border border-stone-200/90 text-stone-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-xs overflow-hidden">
+                        <img src={arcanaDoorImg} alt="Savannah Arcana" className="w-full h-full object-contain p-0.5" />
                       </div>
                       <div className="flex flex-col">
                         <div className="flex items-center gap-1.5">
@@ -626,6 +542,9 @@ export const Header: React.FC = () => {
                     </div>
                     <ChevronRight className="w-3.5 h-3.5 text-emerald-800 group-hover:translate-x-0.5 transition-transform" />
                   </button>
+
+                  {/* PWA Install Button with Savannah Icon */}
+                  <PWAInstallButton className="mt-1" />
 
                   {/* Contact CTA: Call leading favicon + "talk to us" + WhatsApp trailing favicon */}
                   <div

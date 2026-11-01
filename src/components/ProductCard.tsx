@@ -215,13 +215,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
         {/* Footer: Price on the left, Counter / Add CTA on the right in the same row */}
         <div className="pt-2.5 border-t border-stone-100 flex items-center justify-between gap-2">
-          <div className="flex flex-col justify-center min-w-0">
+          <div className="flex items-baseline flex-wrap gap-1.5 sm:gap-2 min-w-0">
             {compareAtPrice != null && compareAtPrice > 0 && (
-              <span className="font-mono text-xs sm:text-[13px] text-stone-400 line-through tabular-nums leading-none mb-0.5">
+              <span className="font-mono text-sm sm:text-base text-stone-400 line-through tabular-nums leading-tight">
                 kes {compareAtPrice.toLocaleString()}
               </span>
             )}
-            <span className="font-mono font-extrabold text-lg sm:text-xl text-stone-900 tabular-nums leading-tight tracking-tight">
+            <span className="font-mono font-extrabold text-xl sm:text-2xl text-stone-900 tabular-nums leading-tight tracking-tight">
               kes {displayPrice.toLocaleString()}
             </span>
           </div>

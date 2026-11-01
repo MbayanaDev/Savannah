@@ -14,7 +14,9 @@ import {
   ChevronDown, 
   Navigation,
   CreditCard,
-  Check
+  Check,
+  PackageCheck,
+  Trash2
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { Order, OrderStatus } from '../../types';
@@ -24,6 +26,7 @@ export const OrdersPage: React.FC = () => {
     activeTrackOrder,
     setActiveTrackOrder,
     updateOrderStatus,
+    deleteOrder,
     orders,
     showToast,
     setViewMode,
@@ -222,11 +225,62 @@ export const OrdersPage: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = originalOverflow;
+    };
+  }, []);
+
   return (
-    <div className="w-full flex flex-col items-center bg-white h-[calc(100vh-6.75rem)] md:h-[calc(100vh-3.5rem)] max-h-[calc(100dvh-6.75rem)] md:max-h-[calc(100dvh-3.5rem)] overflow-hidden">
-      <div className="w-full max-w-xl h-full flex flex-col">
-        {/* Scrollable orders list with no space above or below: edge-to-edge container with clear dividers between items */}
-        <div className="w-full flex-1 min-h-0 bg-white border-b border-stone-200 overflow-y-auto overflow-x-hidden overscroll-contain">
+    <div
+      className="fixed inset-0 z-50 overflow-hidden bg-black/50 backdrop-blur-xs flex justify-end animate-in fade-in duration-200"
+      onClick={handleClose}
+      onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
+      role="dialog"
+      aria-modal="true"
+      aria-label="My Orders"
+    >
+      <div
+        className="relative w-[85vw] max-w-[85vw] h-full bg-white rounded-none shadow-2xl flex flex-col border-l border-stone-200 animate-in slide-in-from-right duration-300 overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Modal Top Header */}
+        <div className="bg-white border-b border-stone-200/90 px-4 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between shrink-0 shadow-2xs">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-[#173b28] text-white flex items-center justify-center shadow-2xs">
+              <PackageCheck className="w-4 h-4" />
+            </div>
+            <h2 className="font-display font-bold text-base sm:text-lg text-stone-900 leading-tight">
+              My Orders
+            </h2>
+            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-[#173b28]/10 text-[#173b28] border border-[#173b28]/20">
+              {orders.length}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleClose}
+              className="w-8 h-8 rounded-full hover:bg-stone-100 active:scale-95 text-stone-500 hover:text-stone-800 flex items-center justify-center transition-colors cursor-pointer"
+              aria-label="Close"
+              title="Close modal"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Scrollable orders list within sidesheet */}
+        <div className="w-full flex-1 min-h-0 bg-stone-50/40 overflow-y-auto overscroll-contain overflow-x-hidden p-1.5 sm:p-2.5 space-y-2">
               {orders.length === 0 ? (
                 <div className="p-8 text-center bg-white border-0 space-y-3">
                   <div className="w-12 h-12 rounded-full bg-emerald-50 text-[#173b28] flex items-center justify-center mx-auto">
@@ -264,14 +318,21 @@ export const OrdersPage: React.FC = () => {
                       }`}
                     >
                       {/* Minimalist summary header - clickable to expand downward */}
-                      <button
-                        type="button"
+                      <div
+                        role="button"
+                        tabIndex={0}
                         onClick={() => setExpandedOrderId(isExpanded ? null : o.id)}
-                        className={`w-full px-4 sm:px-5 py-3 sm:py-3.5 text-left transition-colors cursor-pointer ${
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setExpandedOrderId(isExpanded ? null : o.id);
+                          }
+                        }}
+                        className={`w-full px-2 sm:px-3 py-2.5 sm:py-3 text-left transition-colors cursor-pointer select-none ${
                           isExpanded ? 'bg-stone-50/70' : 'hover:bg-stone-50/50'
                         }`}
                       >
-                        <div className="flex items-center gap-3 sm:gap-3.5">
+                        <div className="flex items-center gap-2 sm:gap-2.5">
                           {/* Leading image to contents */}
                           <div className="relative w-12 h-12 rounded-xl bg-stone-100 border border-stone-200/90 overflow-hidden shrink-0 flex items-center justify-center shadow-2xs">
                             {leadImage ? (
@@ -293,16 +354,47 @@ export const OrdersPage: React.FC = () => {
 
                           {/* Order details info */}
                           <div className="flex-1 min-w-0">
-                            {/* Row 1: Order number with confirmed/dispatched/scheduled moved here */}
-                            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap min-w-0">
+                            {/* Single row combining order number, express/scheduled tag, price, item count, and status badge */}
+                            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap min-w-0 leading-tight">
                               <span className="font-mono font-bold text-stone-900 text-sm sm:text-base tracking-tight shrink-0">
                                 Order #{o.id}
+                              </span>
+
+                              {/* Scheduled / Express indicator moved next to Order # */}
+                              {isExpress ? (
+                                <span className="inline-flex items-center gap-1 text-[10.5px] sm:text-xs font-semibold text-amber-700">
+                                  <span className="w-3.5 h-3.5 rounded bg-amber-100 border border-amber-200/80 text-amber-800 flex items-center justify-center shrink-0">
+                                    <Zap className="w-2 h-2 text-amber-600 fill-amber-500" />
+                                  </span>
+                                  <span>Express</span>
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-[10.5px] sm:text-xs font-semibold text-stone-600">
+                                  <span className="w-3.5 h-3.5 rounded bg-stone-100 border border-stone-200/80 text-stone-700 flex items-center justify-center shrink-0">
+                                    <CalendarClock className="w-2 h-2 text-stone-600" />
+                                  </span>
+                                  <span>Scheduled</span>
+                                </span>
+                              )}
+
+                              <span className="text-stone-300 text-[9px] select-none">&bull;</span>
+
+                              {/* Price */}
+                              <span className="font-bold text-[#173b28] text-xs sm:text-sm">
+                                KES {o.total.toLocaleString()}
+                              </span>
+
+                              <span className="text-stone-300 text-[9px] select-none">&bull;</span>
+
+                              {/* Item count */}
+                              <span className="text-stone-600 text-[11px] sm:text-xs font-medium">
+                                {o.items.length} {o.items.length === 1 ? 'item' : 'items'}
                               </span>
 
                               <span className="text-stone-300 text-[9px] select-none">&bull;</span>
 
                               {/* Status: Confirmed / Packing / Dispatched / Delivered */}
-                              <span className={`inline-flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold ${
+                              <span className={`inline-flex items-center gap-1 text-[10.5px] sm:text-xs font-semibold ${
                                 o.status === 'delivered'
                                   ? 'text-emerald-700'
                                   : o.status === 'out_for_delivery'
@@ -311,7 +403,7 @@ export const OrdersPage: React.FC = () => {
                                   ? 'text-blue-700'
                                   : 'text-stone-600'
                               }`}>
-                                <span className={`w-4.5 h-4.5 rounded-md flex items-center justify-center shrink-0 shadow-2xs ${
+                                <span className={`w-3.5 h-3.5 rounded flex items-center justify-center shrink-0 ${
                                   o.status === 'delivered'
                                     ? 'bg-emerald-100 text-emerald-800 border border-emerald-200/80'
                                     : o.status === 'out_for_delivery'
@@ -321,72 +413,45 @@ export const OrdersPage: React.FC = () => {
                                     : 'bg-stone-100 text-stone-700 border border-stone-200/80'
                                 }`}>
                                   {o.status === 'delivered' ? (
-                                    <CheckCircle2 className="w-3 h-3" />
+                                    <CheckCircle2 className="w-2.5 h-2.5" />
                                   ) : o.status === 'out_for_delivery' ? (
-                                    <Truck className="w-3 h-3" />
+                                    <Truck className="w-2.5 h-2.5" />
                                   ) : o.status === 'packing' ? (
-                                    <Package className="w-3 h-3" />
+                                    <Package className="w-2.5 h-2.5" />
                                   ) : (
-                                    <Clock className="w-3 h-3" />
+                                    <Clock className="w-2.5 h-2.5" />
                                   )}
                                 </span>
                                 <span>{badge.label} ({stepIdx + 1}/4)</span>
                               </span>
-
-                              <span className="text-stone-300 text-[9px] select-none">&bull;</span>
-
-                              {/* Scheduled / Express indicator */}
-                              {isExpress ? (
-                                <span className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold text-amber-700">
-                                  <span className="w-4.5 h-4.5 rounded-md bg-amber-100 border border-amber-200/80 text-amber-800 flex items-center justify-center shrink-0 shadow-2xs">
-                                    <Zap className="w-2.5 h-2.5 text-amber-600 fill-amber-500" />
-                                  </span>
-                                  <span>Express</span>
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold text-stone-600">
-                                  <span className="w-4.5 h-4.5 rounded-md bg-stone-100 border border-stone-200/80 text-stone-700 flex items-center justify-center shrink-0 shadow-2xs">
-                                    <CalendarClock className="w-2.5 h-2.5 text-stone-600" />
-                                  </span>
-                                  <span>Scheduled</span>
-                                </span>
-                              )}
-                            </div>
-
-                            {/* Row 2: Price, Item count, and Item titles preview */}
-                            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] sm:text-xs mt-0.5 leading-tight text-stone-600">
-                              <span className="font-bold text-[#173b28]">
-                                KES {o.total.toLocaleString()}
-                              </span>
-
-                              <span className="text-stone-300 text-[9px] select-none">&bull;</span>
-
-                              <span className="font-medium">
-                                {o.items.length} {o.items.length === 1 ? 'item' : 'items'}
-                              </span>
-
-                              {o.items.length > 0 && (
-                                <>
-                                  <span className="text-stone-300 text-[9px] select-none hidden xs:inline">&bull;</span>
-                                  <span className="text-stone-500 truncate max-w-[150px] sm:max-w-xs hidden xs:inline">
-                                    {o.items.map(i => i.product?.name || (i as any).name).filter(Boolean).slice(0, 2).join(', ')}{o.items.length > 2 ? '…' : ''}
-                                  </span>
-                                </>
-                              )}
                             </div>
                           </div>
 
-                          <ChevronDown
-                            className={`w-4 h-4 text-stone-500 shrink-0 transition-transform duration-200 ${
-                              isExpanded ? 'rotate-180 text-emerald-800' : ''
-                            }`}
-                          />
+                          <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteOrder(o.id);
+                              }}
+                              className="w-7 h-7 rounded-md hover:bg-rose-50 text-stone-400 hover:text-rose-600 flex items-center justify-center transition-colors cursor-pointer"
+                              title={`Remove order #${o.id}`}
+                              aria-label={`Remove order #${o.id}`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                            <ChevronDown
+                              className={`w-4 h-4 text-stone-500 shrink-0 transition-transform duration-200 ${
+                                isExpanded ? 'rotate-180 text-emerald-800' : ''
+                              }`}
+                            />
+                          </div>
                         </div>
-                      </button>
+                      </div>
 
                       {/* Downward expanded details */}
                       {isExpanded && (
-                        <div className="px-4 sm:px-5 pb-4 pt-2.5 border-t border-stone-200/80 bg-stone-50/40 space-y-2.5 animate-in slide-in-from-top-1 duration-150">
+                        <div className="px-2 sm:px-3 pb-3 pt-2 border-t-0 border-t-transparent bg-stone-50/40 space-y-2 animate-in slide-in-from-top-1 duration-150">
                           {/* Minimalist Horizontal Live Progress with icons and dividers */}
                           <div className="space-y-1.5">
                             {/* Horizontal status icons separated by dividers with active divider and icon highlighted */}
@@ -456,7 +521,7 @@ export const OrdersPage: React.FC = () => {
 
                           {/* Delivered State */}
                           {o.status === 'delivered' && (
-                            <div className="pt-2 border-t border-stone-100 flex flex-col items-center justify-center text-center">
+                            <div className="pt-2 border-t-0 border-t-transparent flex flex-col items-center justify-center text-center">
                               <Check strokeWidth={3.5} className="w-5 h-5 text-emerald-600 mb-1" />
                               <div className="text-stone-600 text-[11px] font-medium leading-tight">
                                 Delivered with love and care
@@ -468,7 +533,7 @@ export const OrdersPage: React.FC = () => {
                           {o.status === 'out_for_delivery' && o.riderName && (() => {
                             const vehicleInfo = parseVehicleDetails(o.riderVehicle);
                             return (
-                              <div className="pt-2 border-t border-stone-100 flex items-center justify-between gap-3 text-xs">
+                              <div className="pt-2 border-t-0 border-t-transparent flex items-center justify-between gap-3 text-xs">
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-1.5 font-bold text-stone-900 text-xs leading-tight">
                                     <Bike className="w-3.5 h-3.5 text-stone-700 shrink-0" />
@@ -497,7 +562,7 @@ export const OrdersPage: React.FC = () => {
                           })()}
 
                           {/* Delivery Location & Time Details */}
-                          <div className="pt-2 border-t border-stone-100 text-xs space-y-1.5">
+                          <div className="pt-2 border-t-0 border-t-transparent text-xs space-y-1.5">
                             {o.status !== 'delivered' && (
                               isExpress ? (
                                 <div className="flex items-center gap-1.5 text-stone-800 text-[11px]">
@@ -534,11 +599,22 @@ export const OrdersPage: React.FC = () => {
                                 <span className={o.paymentStatus === 'paid' ? 'text-emerald-700 font-medium' : 'text-amber-700 font-medium'}>
                                   {o.paymentStatus === 'paid'
                                     ? (o.paymentMethod === 'cash' || o.paymentMethod === 'cod')
-                                      ? (o.mpesaCode ? `Paid by Cash (Ref: ${o.mpesaCode})` : 'Paid by Cash')
+                                       ? (o.mpesaCode ? `Paid by Cash (Ref: ${o.mpesaCode})` : 'Paid by Cash')
                                       : `Paid by Mpesa (Ref: ${o.mpesaCode || 'QKM63256030WA'})`
                                     : 'Pay on delivery'}
                                 </span>
                               </span>
+                            </div>
+
+                            <div className="pt-1.5 flex items-center justify-end">
+                              <button
+                                type="button"
+                                onClick={() => deleteOrder(o.id)}
+                                className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[10.5px] font-medium text-stone-500 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors cursor-pointer"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                <span>Remove order</span>
+                              </button>
                             </div>
                           </div>
                         </div>

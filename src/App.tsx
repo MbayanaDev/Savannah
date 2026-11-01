@@ -25,29 +25,55 @@ import { UtilitiesModal } from './components/UtilitiesModal';
 import { ProfileModal } from './components/ProfileModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { Toast } from './components/Toast';
+import { useBodyScrollLock } from './utils/scrollLock';
 
 const AppContent: React.FC = () => {
-  const { viewMode } = useStore();
+  const { 
+    viewMode,
+    isCartOpen,
+    isCheckoutOpen,
+    isNeighborhoodModalOpen,
+    isUtilitiesModalOpen,
+    isProfileOpen,
+    selectedProductDetail
+  } = useStore();
+
+  const isAnyModalActive = Boolean(
+    (viewMode !== 'store' && viewMode !== 'admin') ||
+    isCartOpen ||
+    isCheckoutOpen ||
+    isNeighborhoodModalOpen ||
+    isUtilitiesModalOpen ||
+    isProfileOpen ||
+    Boolean(selectedProductDetail)
+  );
+
+  useBodyScrollLock(isAnyModalActive);
 
   return (
-    <div className="min-h-screen bg-[#FBF9F5] flex flex-col font-sans selection:bg-[#173b28] selection:text-white w-full max-w-full overflow-x-hidden">
+    <div className="min-h-screen bg-[#FBF9F5] flex flex-col font-sans selection:bg-[#173b28] selection:text-white w-full max-w-full overflow-x-clip">
       {/* Top Bar adhering to 3-zone contract */}
       <Header />
 
-      {/* Main View: Storefront vs Merchant Operations Hub vs Dedicated Individual Pages */}
-      <main className="flex-1 w-full max-w-full overflow-x-hidden">
-        {viewMode === 'store' && <Storefront />}
-        {viewMode === 'admin' && <AdminDashboard />}
-        {viewMode === 'about' && <AboutPage />}
-        {viewMode === 'faqs' && <FaqsPage />}
-        {viewMode === 'purpose' && <PurposePage />}
-        {viewMode === 'refunds' && <RefundsPage />}
-        {viewMode === 'privacy' && <PrivacyPage />}
-        {viewMode === 'terms' && <TermsPage />}
-        {viewMode === 'arcana' && <ArcanaPage />}
-        {viewMode === 'blog' && <AboutPage />}
-        {viewMode === 'orders' && <OrdersPage />}
-        {viewMode === 'profile' && <ProfilePage />}
+      {/* Main View: Storefront stays active, and modal pages open as overlays fitting 80% vertical space */}
+      <main className="flex-1 w-full max-w-full overflow-x-clip">
+        {viewMode === 'admin' ? (
+          <AdminDashboard />
+        ) : (
+          <>
+            <Storefront />
+            {viewMode === 'about' && <AboutPage />}
+            {viewMode === 'faqs' && <FaqsPage />}
+            {viewMode === 'purpose' && <PurposePage />}
+            {viewMode === 'refunds' && <RefundsPage />}
+            {viewMode === 'privacy' && <PrivacyPage />}
+            {viewMode === 'terms' && <TermsPage />}
+            {viewMode === 'arcana' && <ArcanaPage />}
+            {viewMode === 'blog' && <AboutPage />}
+            {viewMode === 'orders' && <OrdersPage />}
+            {viewMode === 'profile' && <ProfilePage />}
+          </>
+        )}
       </main>
 
       {/* Global Modals & Drawers */}

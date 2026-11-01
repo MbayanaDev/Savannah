@@ -5,6 +5,7 @@ import { ProductCard } from './ProductCard';
 import { HeroBanner } from './HeroBanner';
 import { Category } from '../types';
 import { SEED_ORDERS } from '../data/seedOrders';
+import savannahLogo from '../assets/images/savannah_logo.png';
 
 export const Storefront: React.FC = () => {
   const {
@@ -78,7 +79,7 @@ export const Storefront: React.FC = () => {
   }, [filteredProducts, sortBy]);
 
   return (
-    <div className="pb-24 md:pb-16">
+    <div className="pb-0">
       {/* Editorial Campaign Hero */}
       <HeroBanner />
 
@@ -174,19 +175,22 @@ export const Storefront: React.FC = () => {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-stone-200 py-3.5 md:py-8 text-stone-600 text-[10px] md:text-sm mt-12 sm:mt-16">
+      <footer className="border-t border-stone-200 pt-3.5 md:pt-8 pb-20 sm:pb-12 md:pb-10 text-stone-600 text-[10px] md:text-sm mt-6 sm:mt-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex justify-between items-start gap-12 sm:gap-24 md:gap-36 mx-4 sm:mx-8 md:mx-14 lg:mx-20">
             {/* First Column: Logo, Phone, Email, Location, WhatsApp */}
             <div className="flex flex-col gap-0.5 md:gap-1.5 shrink-0">
               {/* Logo */}
-              <div className="flex items-center gap-1.5 md:gap-2 pb-0.5 md:pb-1">
-                <div className="w-5 h-5 md:w-7 md:h-7 rounded bg-[#173b28] flex items-center justify-center text-white font-bold text-[10px] md:text-xs shadow-2xs">
-                  S
-                </div>
-                <span className="font-display font-extrabold text-xs md:text-base text-[#173b28] tracking-tight">
-                  Savannah Fresh
-                </span>
+              <div className="flex items-center pb-0.5 md:pb-1">
+                <img
+                  src={savannahLogo}
+                  alt="Savannah Fresh"
+                  className="h-7 sm:h-8 md:h-9 w-auto max-w-[150px] sm:max-w-[175px] md:max-w-[200px] object-contain cursor-pointer"
+                  onClick={() => {
+                    setViewMode('store');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                />
               </div>
 
               {/* Phone Number */}
@@ -231,6 +235,54 @@ export const Storefront: React.FC = () => {
                 <span className="text-[8.5px] md:text-xs text-stone-500 leading-tight text-right w-full">
                   Daily from 7am-7pm
                 </span>
+              </div>
+
+              {/* Connect with us & Social Links */}
+              <div className="flex flex-col gap-1 md:gap-1.5 pt-2 md:pt-2.5 items-start text-left">
+                <div className="font-semibold text-stone-800 text-[10px] md:text-xs">
+                  Connect with us
+                </div>
+                <div className="flex items-center justify-start gap-2 md:gap-2.5 pt-0.5">
+                  <a
+                    href="https://facebook.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-stone-700 hover:bg-[#173b28] text-white flex items-center justify-center transition-colors shadow-2xs"
+                    aria-label="Facebook"
+                    title="Facebook"
+                  >
+                    <Facebook className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-current" />
+                  </a>
+                  <a
+                    href="https://linkedin.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-stone-700 hover:bg-[#173b28] text-white flex items-center justify-center transition-colors shadow-2xs"
+                    aria-label="LinkedIn"
+                    title="LinkedIn"
+                  >
+                    <Linkedin className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-current" />
+                  </a>
+                  <a
+                    href="https://instagram.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-stone-700 hover:bg-[#173b28] text-white flex items-center justify-center transition-colors shadow-2xs"
+                    aria-label="Instagram"
+                    title="Instagram"
+                  >
+                    <Instagram className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('blog')}
+                    className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-stone-700 hover:bg-[#173b28] text-white flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
+                    aria-label="Blog posts"
+                    title="Blog posts"
+                  >
+                    <BookOpen className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-current" />
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -303,54 +355,6 @@ export const Storefront: React.FC = () => {
                   <span>Savannah Arcana</span>
                   <span className="text-[9px] bg-emerald-100 text-emerald-800 font-sans px-1.5 py-0.5 rounded font-semibold whitespace-nowrap">co-create with us :)</span>
                 </button>
-              </div>
-
-              {/* Connect with us */}
-              <div className="flex flex-col gap-1 md:gap-1.5 pt-0.5 items-start text-left">
-                <div className="font-semibold text-stone-800 text-[10px] md:text-xs">
-                  Connect with us
-                </div>
-                <div className="flex items-center justify-start gap-1.5 md:gap-2">
-                  <a
-                    href="https://facebook.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-4 h-4 md:w-6 md:h-6 rounded-full bg-stone-700 hover:bg-[#173b28] text-white flex items-center justify-center transition-colors"
-                    aria-label="Facebook"
-                    title="Facebook"
-                  >
-                    <Facebook className="w-2.5 h-2.5 md:w-3 md:h-3 fill-current" />
-                  </a>
-                  <a
-                    href="https://linkedin.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-4 h-4 md:w-6 md:h-6 rounded-full bg-stone-700 hover:bg-[#173b28] text-white flex items-center justify-center transition-colors"
-                    aria-label="LinkedIn"
-                    title="LinkedIn"
-                  >
-                    <Linkedin className="w-2.5 h-2.5 md:w-3 md:h-3 fill-current" />
-                  </a>
-                  <a
-                    href="https://instagram.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-4 h-4 md:w-6 md:h-6 rounded-full bg-stone-700 hover:bg-[#173b28] text-white flex items-center justify-center transition-colors"
-                    aria-label="Instagram"
-                    title="Instagram"
-                  >
-                    <Instagram className="w-2.5 h-2.5 md:w-3 md:h-3" />
-                  </a>
-                  <button
-                    type="button"
-                    onClick={() => setViewMode('blog')}
-                    className="w-4 h-4 md:w-6 md:h-6 rounded-full bg-stone-700 hover:bg-[#173b28] text-white flex items-center justify-center transition-colors cursor-pointer"
-                    aria-label="Blog posts"
-                    title="Blog posts"
-                  >
-                    <BookOpen className="w-2.5 h-2.5 md:w-3 md:h-3 fill-current" />
-                  </button>
-                </div>
               </div>
             </div>
           </div>

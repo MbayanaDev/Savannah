@@ -155,7 +155,10 @@ export const CheckoutModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+      onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
+    >
       <div 
         className="relative w-full max-w-2xl bg-white rounded-3xl overflow-hidden shadow-2xl border border-stone-200 max-h-[92vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
@@ -180,7 +183,7 @@ export const CheckoutModal: React.FC = () => {
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          <div className="overflow-y-auto flex-1 px-4 pt-2.5 pb-4 sm:px-6 sm:pt-3 sm:pb-5 space-y-4">
+          <div className="overflow-y-auto overscroll-contain flex-1 px-4 pt-2.5 pb-4 sm:px-6 sm:pt-3 sm:pb-5 space-y-4">
           {/* Section: Delivery Location */}
           <div className="space-y-3">
             {/* Main Container Header - No chevron */}
@@ -582,19 +585,19 @@ export const CheckoutModal: React.FC = () => {
           </div>
 
           {/* Sticky Elevated Footer - Always Visible */}
-          <div className="sticky bottom-0 z-30 bg-white/98 backdrop-blur-md border-t border-stone-200/90 p-4 sm:px-6 shadow-[0_-8px_25px_rgba(0,0,0,0.08)] space-y-3">
+          <div className="sticky bottom-0 z-30 bg-white/98 backdrop-blur-md border-t border-stone-200/90 px-3 py-2.5 sm:px-4 sm:py-3 shadow-[0_-8px_25px_rgba(0,0,0,0.08)] space-y-2">
             {/* Order and delivery fee with divider */}
-            <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 py-1 text-base sm:text-lg">
+            <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-4 px-2 sm:px-3 mx-auto py-0.5 text-sm sm:text-base">
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className="font-semibold text-stone-700">Order:</span>
-                <span className="font-bold text-stone-950 font-mono">
+                <span className="text-sm sm:text-base font-semibold text-stone-700">Order:</span>
+                <span className="text-base sm:text-lg font-bold text-stone-950 font-mono">
                   KES {cartSubtotal.toLocaleString()}
                 </span>
               </div>
-              <span className="h-5 sm:h-6 w-px bg-stone-300" aria-hidden="true" />
+              <span className="h-4 sm:h-5 w-px bg-stone-300" aria-hidden="true" />
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className="font-semibold text-stone-700">Delivery fee:</span>
-                <span className="font-bold text-stone-950 font-mono">
+                <span className="text-sm sm:text-base font-semibold text-stone-700">Delivery fee:</span>
+                <span className="text-base sm:text-lg font-bold text-stone-950 font-mono">
                   {effectiveDeliveryFee === 0 ? (
                     <span className="text-[#173b28] font-bold">Free</span>
                   ) : (
@@ -607,7 +610,7 @@ export const CheckoutModal: React.FC = () => {
             <button
               type="submit"
               disabled={isProcessing}
-              className="relative z-40 w-full min-h-[52px] px-6 rounded-xl bg-[#173b28] hover:bg-[#122e20] active:scale-98 text-white font-semibold text-base flex items-center justify-center gap-2 shadow-xl hover:shadow-2xl transition-all cursor-pointer disabled:opacity-50"
+              className="relative z-40 w-full min-h-[46px] sm:min-h-[48px] px-4 py-2.5 rounded-xl bg-[#173b28] hover:bg-[#122e20] active:scale-98 text-white font-semibold text-sm sm:text-base flex items-center justify-center gap-2 shadow-xl hover:shadow-2xl transition-all cursor-pointer disabled:opacity-50"
             >
               {isProcessing ? (
                 <>

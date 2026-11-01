@@ -219,7 +219,10 @@ export const NeighborhoodModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/65 backdrop-blur-xs animate-in fade-in duration-200">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/65 backdrop-blur-xs animate-in fade-in duration-200"
+      onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
+    >
       <div 
         className="relative w-full max-w-xl bg-[#FCFBF8] rounded-xl overflow-hidden shadow-2xl border border-stone-200 max-h-[92vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
@@ -279,7 +282,7 @@ export const NeighborhoodModal: React.FC = () => {
 
         {/* Modal Body */}
         {activeTab === 'saved' ? (
-          <div className="overflow-y-auto flex-1 p-4 sm:p-6 space-y-4">
+          <div className="overflow-y-auto overscroll-contain flex-1 p-4 sm:p-6 space-y-4">
             {/* Section: Your drop-off locations */}
             <div className="space-y-3">
               <div className="flex items-center justify-between px-0.5">
@@ -487,7 +490,7 @@ export const NeighborhoodModal: React.FC = () => {
             </div>
 
             {/* Neighborhood Containers List */}
-            <div className="p-3.5 sm:p-4 overflow-y-auto space-y-3 flex-1 bg-[#FCFBF8]">
+            <div className="p-3.5 sm:p-4 overflow-y-auto overscroll-contain space-y-3 flex-1 bg-[#FCFBF8]">
               {filteredNeighborhoods.map((n) => {
                 const isSelected = selectedNeighborhood.id === n.id;
                 const subareas = n.popularEstate

@@ -33,61 +33,6 @@ export const SEED_ORDERS: Order[] = [
     riderVehicle: 'Honda ACE 125 (KMDF 849K)'
   },
   {
-    id: 'SF-89209',
-    customerName: 'Marcus Van Der Meer',
-    customerPhone: '+254 733 910 249',
-    customerEmail: 'marcus.vdm@outlook.com',
-    neighborhood: NAIROBI_NEIGHBORHOODS[3], // Karen
-    deliveryAddress: 'House 12, Hardy Forest Mews, Bogani East Rd',
-    deliverySlot: 'Today, 2:00 PM - 5:00 PM (Afternoon)',
-    dropoffNote: 'Ring the brass bell at the main white gate.',
-    items: [
-      { product: INITIAL_PRODUCTS[0], quantity: 3 },
-      { product: INITIAL_PRODUCTS[5], quantity: 2 },
-      { product: INITIAL_PRODUCTS[9], quantity: 1 },
-      { product: INITIAL_PRODUCTS[8], quantity: 1 }
-    ],
-    subtotal: 2810,
-    deliveryFee: 300,
-    discount: 0,
-    total: 3110,
-    paymentMethod: 'mpesa',
-    mpesaCode: 'QLE83910KP',
-    paymentStatus: 'paid',
-    status: 'packing',
-    createdAt: '2026-10-17T07:45:00Z'
-  },
-  {
-    id: 'SF-89208',
-    customerName: 'Dr. Sharon Mutua',
-    customerPhone: '+254 712 550 193',
-    customerEmail: 'sharon.mutua@knh.or.ke',
-    neighborhood: NAIROBI_NEIGHBORHOODS[1], // Westlands
-    deliveryAddress: 'Brookside Court, Block C 2nd Floor, Brookside Dr',
-    deliverySlot: 'Today, 8:00 AM - 10:00 AM (Early Harvest)',
-    dropoffNote: 'Delivered to reception.',
-    items: [
-      { product: INITIAL_PRODUCTS[1], quantity: 2 },
-      { product: INITIAL_PRODUCTS[3], quantity: 2 },
-      { product: INITIAL_PRODUCTS[4], quantity: 1 },
-      { product: INITIAL_PRODUCTS[10], quantity: 2 }
-    ],
-    subtotal: 1700,
-    deliveryFee: 150,
-    discount: 0,
-    total: 1850,
-    paymentMethod: 'mpesa',
-    mpesaCode: 'PLM10934NZ',
-    paymentStatus: 'paid',
-    status: 'delivered',
-    createdAt: '2026-10-17T06:20:00Z',
-    dispatchedAt: '2026-10-17T07:00:00Z',
-    deliveredAt: '2026-10-17T07:48:00Z',
-    riderName: 'Kevin Ndung\'u',
-    riderPhone: '+254 720 994 102',
-    riderVehicle: 'Savannah Eco-Van (KDJ 319X)'
-  },
-  {
     id: 'SF-89211',
     customerName: 'Fatuma Hassan',
     customerPhone: '+254 798 123 456',
