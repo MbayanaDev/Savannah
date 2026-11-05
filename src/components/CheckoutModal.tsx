@@ -1,30 +1,50 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, use } from 'react';
 import { ArrowLeft, ArrowRight, Check, Loader2, MapPin, ChevronDown, Bike, Zap, Clock } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { NAIROBI_NEIGHBORHOODS } from '../data/neighborhoods';
-import mpesaLogoImg from '../assets/images/mpesa_logo.png';
+import { supabase } from '../lib/supabase';
+
+function normalizeKenyanPhone(input: string): string | null {
+  const digits = input.replace(/\D/g, '');
+
+  if (/^254[17]\d{8}$/.test(digits)) {
+    return digits;
+  }
+
+  if (/^0[17]\d{8}$/.test(digits)) {
+    return `254${digits.slice(1)}`;
+  }
+
+  if (/^[17]\d{8}$/.test(digits)) {
+    return `254${digits}`;
+  }
+
+  return null;
+}
 
 export const CheckoutModal: React.FC = () => {
   const {
+    currentUser,
     isCheckoutOpen,
     setIsCheckoutOpen,
     setIsCartOpen,
     cart,
     cartSubtotal,
-    deliveryFee,
-    cartTotal,
     selectedNeighborhood,
     setSelectedNeighborhood,
     savedAddresses,
     selectAddress,
     activeSavedAddress,
     createOrder,
+    initiateKcbPayment,
+    clearCart,
+    setViewMode,
     showToast
   } = useStore();
 
-  const [name, setName] = useState('Kelvin Munene');
-  const [phone, setPhone] = useState('0722 890 123');
-  const [email, setEmail] = useState('kelvin.munene@gmail.com');
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+
   const [isChangingAddress, setIsChangingAddress] = useState(false);
   const [deliveryType, setDeliveryType] = useState<'express' | 'scheduled'>('express');
   const [selectedDeliveryDate, setSelectedDeliveryDate] = useState<'today' | 'tomorrow'>('today');
@@ -49,7 +69,7 @@ export const CheckoutModal: React.FC = () => {
   });
 
   const [address, setAddress] = useState(
-    activeSavedAddress 
+    activeSavedAddress
       ? `${activeSavedAddress.apartment}, ${activeSavedAddress.street}, ${activeSavedAddress.region}`
       : 'Silver Oak Court, Apt 3B, Dennis Pritt'
   );
@@ -59,7 +79,7 @@ export const CheckoutModal: React.FC = () => {
   );
   const baseDeliveryFee = deliveryType === 'express' ? 350 : 200;
   const effectiveDeliveryFee = cart.length === 0 ? 0 : cartSubtotal >= 3500 ? 0 : baseDeliveryFee;
-  const totalPayable = cartSubtotal + effectiveDeliveryFee;
+
 
   useEffect(() => {
     if (activeSavedAddress) {
@@ -69,12 +89,53 @@ export const CheckoutModal: React.FC = () => {
       }
     }
   }, [activeSavedAddress]);
-  const [paymentMethod, setPaymentMethod] = useState<'mpesa' | 'cash'>('mpesa');
 
-  // M-Pesa STK Push Simulation state
+
   const [isProcessing, setIsProcessing] = useState(false);
-  const [stkPromptActive, setStkPromptActive] = useState(false);
-  const [stkCountdown, setStkCountdown] = useState(5);
+
+  const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
+  const [paymentState, setPaymentState] = useState<
+    'idle' | 'pending' | 'failed' | 'unknown'
+  >('idle');
+  const [paymentAttemptKey, setPaymentAttemptKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const client = supabase;
+
+    if (!currentUser?.id || !client) {
+      setName('');
+      setPhone('');
+      return;
+    }
+
+    setName(currentUser.name);
+    setPhone('');
+
+    const loadProfilePhone = async () => {
+      const { data, error } = await client
+        .from('profiles')
+        .select('phone')
+        .eq('id', currentUser.id)
+        .maybeSingle();
+
+      if (cancelled) return;
+
+      if (error) {
+        console.warn('[Checkout] Could not load profile phone:', error.message);
+        return;
+      }
+
+      setPhone(data?.phone ?? '');
+    };
+
+    void loadProfilePhone();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser?.id, currentUser?.name]);
+
 
   if (!isCheckoutOpen) return null;
 
@@ -86,65 +147,102 @@ export const CheckoutModal: React.FC = () => {
       return;
     }
 
-    if (paymentMethod === 'mpesa') {
-      setIsProcessing(true);
-      setStkPromptActive(true);
-      setStkCountdown(4);
+    if (paymentState === 'unknown' || paymentState === 'pending') {
+      showToast(
+        'This payment attempt cannot safely be retried yet.',
+        'warning'
+      );
+      return;
+    }
 
-      // Simulate STK push interaction
-      const interval = setInterval(() => {
-        setStkCountdown(prev => {
-          if (prev <= 1) {
-            clearInterval(interval);
-            return 0;
-          }
-          return prev - 1;
+    const normalizedPhone = normalizeKenyanPhone(phone);
+
+    if (!normalizedPhone) {
+      showToast(
+        'Enter a valid Kenyan mobile number, e.g. 0712345678.',
+        'warning'
+      );
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      // Create the order only once. Payment retries reuse this order.
+      let orderId = createdOrderId;
+
+      if (!orderId) {
+        const order = await createOrder({
+          customerName: name.trim(),
+          customerPhone: phone.trim(),
+          deliveryAddress: address.trim(),
+          deliverySlot,
+          deliveryMethod: deliveryType,
+          dropoffNote: dropoffNote.trim(),
         });
-      }, 1000);
 
-      setTimeout(async () => {
-        clearInterval(interval);
-        try {
-          await createOrder({
-            customerName: name,
-            customerPhone: phone,
-            customerEmail: email,
-            deliveryAddress: address,
-            deliverySlot,
-            dropoffNote,
-            paymentMethod: 'mpesa'
-          });
-          setIsProcessing(false);
-          setStkPromptActive(false);
-          setIsCheckoutOpen(false);
-        } catch (err) {
-          console.error(err);
-          setIsProcessing(false);
-          setStkPromptActive(false);
-        }
-      }, 4500);
+        orderId = order.id;
+        setCreatedOrderId(order.id);
+      }
 
-    } else {
-      // Direct Card or COD checkout
-      setIsProcessing(true);
-      setTimeout(async () => {
-        try {
-          await createOrder({
-            customerName: name,
-            customerPhone: phone,
-            customerEmail: email,
-            deliveryAddress: address,
-            deliverySlot,
-            dropoffNote,
-            paymentMethod
-          });
-          setIsProcessing(false);
-          setIsCheckoutOpen(false);
-        } catch (err) {
-          console.error(err);
-          setIsProcessing(false);
-        }
-      }, 1200);
+      // A new key is needed only after an explicit payment rejection.
+      const idempotencyKey =
+        paymentState === 'failed'
+          ? crypto.randomUUID()
+          : paymentAttemptKey ?? crypto.randomUUID();
+
+      setPaymentAttemptKey(idempotencyKey);
+
+      const result = await initiateKcbPayment(
+        orderId,
+        normalizedPhone,
+        idempotencyKey
+      );
+
+      if (result.status === 'pending') {
+        setPaymentState('pending');
+        clearCart();
+        setIsCheckoutOpen(false);
+        setViewMode('orders');
+
+        showToast(
+          'STK request sent. Complete the payment on your phone.',
+          'success'
+        );
+        return;
+      }
+
+      if (result.status === 'failed') {
+        setPaymentState('failed');
+
+        showToast(
+          result.error || 'KCB rejected the payment request. You can retry.',
+          'warning'
+        );
+        return;
+      }
+
+      // Includes unknown, initiating, and any unexpected status.
+      setPaymentState('unknown');
+      clearCart();
+      setIsCheckoutOpen(false);
+      setViewMode('orders');
+
+      showToast(
+        'Payment confirmation is uncertain. Your order was created; check its status before taking further action.',
+        'warning'
+      );
+    } catch (err) {
+      console.error('[Checkout] Checkout failed:', err);
+
+      showToast(
+        err instanceof Error
+          ? err.message
+          : 'Checkout could not be completed.',
+        'warning'
+      );
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -155,11 +253,11 @@ export const CheckoutModal: React.FC = () => {
   };
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
       onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
     >
-      <div 
+      <div
         className="relative w-full max-w-2xl bg-white rounded-3xl overflow-hidden shadow-2xl border border-stone-200 max-h-[92vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
@@ -218,8 +316,8 @@ export const CheckoutModal: React.FC = () => {
                           <span>{name}</span>
                           <span className="font-normal text-stone-400 mx-1.5">·</span>
                           <span className="font-semibold text-stone-800">
-                            {activeSavedAddress 
-                              ? `${activeSavedAddress.apartment}, ${activeSavedAddress.street}` 
+                            {activeSavedAddress
+                              ? `${activeSavedAddress.apartment}, ${activeSavedAddress.street}`
                               : address}
                           </span>
                         </div>
@@ -243,8 +341,8 @@ export const CheckoutModal: React.FC = () => {
                             <span>{name}</span>
                             <span className="font-normal text-stone-400 mx-1.5">·</span>
                             <span className="font-semibold text-stone-800">
-                              {activeSavedAddress 
-                                ? `${activeSavedAddress.apartment}, ${activeSavedAddress.street}` 
+                              {activeSavedAddress
+                                ? `${activeSavedAddress.apartment}, ${activeSavedAddress.street}`
                                 : address}
                             </span>
                           </div>
@@ -491,96 +589,33 @@ export const CheckoutModal: React.FC = () => {
                 )}
               </div>
 
-              {/* Section 4: M-Pesa Number Input Area (Always Expanded) */}
+              {/* Section 4: Contact Phone Number */}
               <div className="space-y-1.5 pt-0.5">
-                <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-stone-900">
-                      M-Pesa Number
-                    </span>
-                    <span className="text-[11px] text-stone-400 font-medium">· Safaricom</span>
-                  </div>
-                </div>
-
-                <div className="space-y-2 pt-1 animate-in fade-in duration-150">
-                  <div className="flex items-center gap-2">
-                    <div className="relative flex-1 flex items-center min-w-0 h-11">
-                      {/* Leading official M-Pesa Logo - fits container height without overflow */}
-                      <div className="absolute left-1.5 inset-y-1 flex items-center pointer-events-none shrink-0 z-10">
-                        <img 
-                          src={mpesaLogoImg} 
-                          alt="M-Pesa" 
-                          className="h-full w-auto object-contain max-h-full"
-                        />
-                      </div>
-
-                      {/* Phone Number Input */}
-                      <input
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="07XX XXX XXX"
-                        required
-                        className="w-full h-full bg-white border border-stone-200/90 hover:border-[#009A44]/60 focus:border-[#009A44] focus:ring-2 focus:ring-[#009A44]/20 rounded-xl pl-20 sm:pl-[86px] pr-3 text-xs sm:text-sm font-semibold text-stone-900 placeholder-stone-400 shadow-2xs transition-all outline-none"
-                      />
-                    </div>
-
-                    {/* Send OTP button to initiate the push - slightly shorter */}
-                    <button
-                      type="button"
-                      onClick={handleSubmit}
-                      disabled={isProcessing}
-                      className="h-9 sm:h-9.5 px-3 bg-[#009A44] hover:bg-[#00823a] active:scale-95 text-white text-[11px] sm:text-xs font-bold rounded-lg shadow-xs transition-all cursor-pointer shrink-0 disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap self-center"
-                      title="Send OTP to initiate M-Pesa STK push"
-                    >
-                      {isProcessing ? (
-                        <>
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          <span>Sending...</span>
-                        </>
-                      ) : (
-                        <span>Send OTP</span>
-                      )}
-                    </button>
-                  </div>
-
-                  <p className="text-[11px] text-stone-500 leading-tight">
-                    Instant STK push prompt will be sent to <strong className="text-stone-700 font-semibold">{phone || 'your phone'}</strong>. Enter PIN to confirm.
-                  </p>
-                </div>
-              </div>
-          </div>
-
-          {/* Interactive M-Pesa STK Push Simulation Overlay */}
-          {stkPromptActive && (
-            <div className="p-4 rounded-2xl bg-[#009A44] text-white shadow-xl space-y-3 animate-in zoom-in-95">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-white animate-ping" />
-                  <span className="text-xs font-bold uppercase tracking-wider">
-                    M-Pesa STK Push Initiated
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-stone-900">
+                    Contact Phone Number
+                  </span>
+                  <span className="text-[11px] text-stone-400 font-medium">
+                    · For delivery updates
                   </span>
                 </div>
-                <span className="text-xs font-mono font-bold bg-white/20 px-2 py-0.5 rounded">
-                  {stkCountdown}s
-                </span>
+
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="07XX XXX XXX"
+                  required
+                  className="w-full h-11 bg-white border border-stone-200/90 hover:border-stone-300 focus:border-[#173b28] focus:ring-2 focus:ring-[#173b28]/20 rounded-xl px-3 text-xs sm:text-sm font-semibold text-stone-900 placeholder-stone-400 shadow-2xs transition-all outline-none"
+                />
+
+                <p className="text-[11px] text-stone-500 leading-tight">
+                  We'll use this number as your contact phone number for the order.
+                </p>
               </div>
 
-              <div className="bg-white/10 p-3 rounded-xl text-xs space-y-1">
-                <div className="font-semibold text-stone-100">
-                  Simulating STK Push to {phone}
-                </div>
-                <div className="text-stone-200 text-[11px]">
-                  &ldquo;Do you want to pay Savannah Fresh Grocers KES {totalPayable.toLocaleString()}? Enter M-Pesa PIN.&rdquo;
-                </div>
-              </div>
+          </div>
 
-              <div className="flex items-center gap-2 text-[11px] text-stone-200">
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>Awaiting Safaricom confirmation handshake...</span>
-              </div>
-            </div>
-          )}
 
           </div>
 
@@ -588,9 +623,11 @@ export const CheckoutModal: React.FC = () => {
           <div className="sticky bottom-0 z-30 bg-white/98 backdrop-blur-md border-t border-stone-200/90 px-3 py-2.5 sm:px-4 sm:py-3 shadow-[0_-8px_25px_rgba(0,0,0,0.08)] space-y-2">
             {/* Order and delivery fee with divider */}
             <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-4 px-2 sm:px-3 mx-auto py-0.5 text-sm sm:text-base">
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className="text-sm sm:text-base font-semibold text-stone-700">Order:</span>
-                <span className="text-base sm:text-lg font-bold text-stone-950 font-mono">
+              <div className="flex items-center justify-between px-2 py-1">
+                <span className="text-sm font-medium text-stone-600">
+                  Estimated subtotal
+                </span>
+                <span className="text-base font-bold text-stone-950 font-mono">
                   KES {cartSubtotal.toLocaleString()}
                 </span>
               </div>
@@ -609,23 +646,28 @@ export const CheckoutModal: React.FC = () => {
 
             <button
               type="submit"
-              disabled={isProcessing}
+              disabled={
+                isProcessing ||
+                paymentState === 'unknown' ||
+                paymentState === 'pending'
+              }
               className="relative z-40 w-full min-h-[46px] sm:min-h-[48px] px-4 py-2.5 rounded-xl bg-[#173b28] hover:bg-[#122e20] active:scale-98 text-white font-semibold text-sm sm:text-base flex items-center justify-center gap-2 shadow-xl hover:shadow-2xl transition-all cursor-pointer disabled:opacity-50"
             >
               {isProcessing ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span>
-                    {paymentMethod === 'mpesa' ? 'Processing M-Pesa Handshake...' : 'Confirming Cash Order...'}
+                    {createdOrderId ? 'Requesting payment...' : 'Creating order...'}
                   </span>
+                </>
+              ) : paymentState === 'failed' ? (
+                <>
+                  <span>Retry payment</span>
+                  <ArrowRight className="w-4 h-4" />
                 </>
               ) : (
                 <>
-                  <span>
-                    {paymentMethod === 'mpesa'
-                      ? `Continue to Pay KES ${totalPayable.toLocaleString()}`
-                      : `Place Cash Order · KES ${totalPayable.toLocaleString()}`}
-                  </span>
+                  <span>Place order & pay</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}

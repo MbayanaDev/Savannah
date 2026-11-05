@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Trash2, Plus, Minus, ArrowRight, ShoppingBag, MapPin, Truck } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
+import { isSameCartItem } from '../lib/cartIdentity';
 
 export const CartDrawer: React.FC = () => {
   const {
@@ -170,7 +171,7 @@ export const CartDrawer: React.FC = () => {
                     <div className="flex flex-col items-end gap-1 shrink-0">
                       <div className="flex items-center bg-stone-100 rounded-lg border border-stone-200 p-0.5">
                         <button
-                          onClick={() => updateQuantity(product.id, quantity - 1, product.selectedSpecification?.product_specification)}
+                          onClick={() => updateQuantity(product, quantity - 1)}
                           className="w-7 h-7 flex items-center justify-center text-stone-600 hover:text-stone-900 cursor-pointer"
                           aria-label="Decrease"
                         >
@@ -180,7 +181,7 @@ export const CartDrawer: React.FC = () => {
                           {quantity}
                         </span>
                         <button
-                          onClick={() => updateQuantity(product.id, quantity + 1, product.selectedSpecification?.product_specification)}
+                          onClick={() => updateQuantity(product, quantity + 1)}
                           disabled={quantity >= product.stock}
                           className="w-7 h-7 flex items-center justify-center text-stone-600 hover:text-stone-900 cursor-pointer disabled:opacity-40"
                           aria-label="Increase"
@@ -192,7 +193,7 @@ export const CartDrawer: React.FC = () => {
                       {/* Delete/remove icon button to the right below of the counter */}
                       <button
                         type="button"
-                        onClick={() => removeFromCart(product.id, product.selectedSpecification?.product_specification)}
+                        onClick={() => removeFromCart(product)}
                         className="p-1 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
                         title={`Remove ${product.name}`}
                         aria-label={`Remove ${product.name}`}

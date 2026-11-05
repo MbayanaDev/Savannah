@@ -70,7 +70,6 @@ export const ProfilePage: React.FC = () => {
     setIsLoadingGoogle(true);
     try {
       await signInWithGoogle();
-      showToast('Signed in successfully', 'success');
     } finally {
       setIsLoadingGoogle(false);
     }

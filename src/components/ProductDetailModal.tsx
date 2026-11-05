@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { X, ShieldCheck, Clock, MapPin, Sparkles, Plus, Minus, ShoppingBag } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
+import { isSameCartItem } from '../lib/cartIdentity';
 
 export const ProductDetailModal: React.FC = () => {
   const {
@@ -16,7 +17,14 @@ export const ProductDetailModal: React.FC = () => {
     return product?.variants?.find(v => v.isDefault)?.id || product?.variants?.[0]?.id || '';
   });
 
-  const specs = product?.specifications || product?.variants?.[0]?.specifications || [];
+  const currentVariant =
+    product?.variants?.find(v => v.id === selectedVariantId) ??
+    product?.variants?.[0];
+
+  const specs =
+    currentVariant?.specifications ??
+    product?.specifications ??
+    [];
 
   const defaultSpecIndex = useMemo(() => {
     if (product?.selectedSpecification) {
@@ -38,7 +46,6 @@ export const ProductDetailModal: React.FC = () => {
 
   if (!product) return null;
 
-  const currentVariant = product.variants?.find(v => v.id === selectedVariantId) || product.variants?.[0];
   const activeSpec = specs[selectedSpecIndex] || specs[0];
   const basePrice = currentVariant ? currentVariant.price : product.price;
   const activePriceAdjustment = Number(activeSpec?.price_adjustment || 0);
@@ -64,6 +71,7 @@ export const ProductDetailModal: React.FC = () => {
 
   const variantProduct = {
     ...product,
+    variantId: currentVariant?.id ?? product.variantId,
     price: activePrice,
     compareAtPrice: activeCompareAtPrice,
     unit: activeUnit,
@@ -71,22 +79,21 @@ export const ProductDetailModal: React.FC = () => {
     selectedSpecification: activeSpec
   };
 
-  const cartItem = cart.find(
-    item =>
-      item.product.id === product.id &&
-      (!item.product.selectedSpecification ||
-        item.product.selectedSpecification.product_specification === activeSpec?.product_specification)
+  const cartItem = cart.find(item =>
+      isSameCartItem(item.product, variantProduct)
   );
-  const quantity = cartItem ? cartItem.quantity : 0;
+
+  const quantity = cartItem?.quantity ?? 0;
+
   const isOutOfStock = activeStock <= 0;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
       onClick={() => setSelectedProductDetail(null)}
       onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
     >
-      <div 
+      <div
         className="relative w-full max-w-2xl bg-white rounded-3xl overflow-hidden shadow-2xl border border-stone-200 max-h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
@@ -110,7 +117,7 @@ export const ProductDetailModal: React.FC = () => {
               referrerPolicy="no-referrer"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-            
+
             {/* Top pill reading key "tag" from specifications */}
             {specTag && (
               <div className="absolute top-4 left-5 z-10 pointer-events-none">
@@ -314,7 +321,7 @@ export const ProductDetailModal: React.FC = () => {
             ) : quantity > 0 ? (
               <div className="flex items-center bg-white rounded-xl border border-stone-300 p-1 shadow-sm">
                 <button
-                  onClick={() => updateQuantity(product.id, quantity - 1, activeSpec?.product_specification)}
+                  onClick={() => updateQuantity(variantProduct, quantity - 1)}
                   className="w-10 h-10 flex items-center justify-center text-stone-700 hover:text-stone-900 transition-colors cursor-pointer"
                 >
                   <Minus className="w-4 h-4" />

@@ -4,14 +4,23 @@ import { INITIAL_PRODUCTS, CATEGORIES_CONFIG, SUBCATEGORIES_CONFIG } from '../da
 import { NAIROBI_NEIGHBORHOODS, DEFAULT_NEIGHBORHOOD } from '../data/neighborhoods';
 import { INITIAL_SAVED_ADDRESSES } from '../data/savedAddresses';
 import { SEED_ORDERS } from '../data/seedOrders';
-import { fetchRemoteCatalog, fetchRemoteCategories, fetchRemoteSubcategories, triggerSeedCategories, updateRemoteVariantStock, updateRemoteVariantPrice } from '../lib/supabaseService';
+import {
+  fetchRemoteCatalog,
+  fetchRemoteCategories,
+  fetchRemoteSubcategories,
+  updateRemoteVariantStock,
+  updateRemoteVariantPrice
+} from '../lib/supabaseService';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import type { User } from '@supabase/supabase-js';
+import { isSameCartItem } from '../lib/cartIdentity';
+import { mapDatabaseOrder } from '../lib/orderMappers';
 
 interface StoreContextType {
   products: Product[];
   categories: Category[];
   currentUser: UserProfile | null;
-  signInWithGoogle: (customUser?: Partial<UserProfile>) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   categoriesList: CategoryInfo[];
   subcategoriesList: SubcategoryItem[];
@@ -35,8 +44,10 @@ interface StoreContextType {
   updateSavedAddress: (addr: SavedAddress) => void;
   cart: CartItem[];
   addToCart: (product: Product, quantity?: number) => void;
-  removeFromCart: (productId: string, spec?: string) => void;
-  updateQuantity: (productId: string, quantity: number, spec?: string) => void;
+
+  removeFromCart: (product: Product) => void;
+  updateQuantity: (product: Product, quantity: number) => void;
+
   clearCart: () => void;
   cartSubtotal: number;
   deliveryFee: number;
@@ -44,19 +55,31 @@ interface StoreContextType {
   cartTotal: number;
   cartCount: number;
   orders: Order[];
+
   createOrder: (orderData: {
     customerName: string;
     customerPhone: string;
-    customerEmail: string;
     deliveryAddress: string;
     deliverySlot: string;
+    deliveryMethod: 'express' | 'scheduled';
     dropoffNote?: string;
-    paymentMethod: 'mpesa' | 'card' | 'cod' | 'cash';
-    mpesaCode?: string;
   }) => Promise<Order>;
+
+  initiateKcbPayment: (
+    orderId: string,
+    phoneNumber: string,
+    idempotencyKey: string
+  ) => Promise<{
+    paymentId?: string;
+    status: string;
+    message?: string;
+    error?: string;
+    providerCode?: string;
+  }>;
+
   updateOrderStatus: (orderId: string, status: OrderStatus, riderDetails?: { riderName: string; riderPhone: string; riderVehicle: string }) => void;
   deleteOrder: (orderId: string) => void;
-  confirmOrderPayment: (orderId: string, mpesaCode: string) => void;
+
   updateProductStock: (productId: string, newStock: number) => void;
   updateProductPrice: (productId: string, newPrice: number) => void;
   addNewProduct: (product: Omit<Product, 'id'>) => void;
@@ -168,8 +191,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     // Sync neighborhood
     const regionLower = addr.region.toLowerCase();
-    const matchingNeighborhood = NAIROBI_NEIGHBORHOODS.find(n => 
-      n.name.toLowerCase().includes(regionLower) || 
+    const matchingNeighborhood = NAIROBI_NEIGHBORHOODS.find(n =>
+      n.name.toLowerCase().includes(regionLower) ||
       regionLower.includes(n.id.toLowerCase()) ||
       n.popularEstate.toLowerCase().includes(regionLower)
     );
@@ -264,91 +287,119 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [subcategoriesList, setSubcategoriesList] = useState<SubcategoryItem[]>(SUBCATEGORIES_CONFIG);
 
   // Authentication State
-  const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
-    try {
-      const saved = localStorage.getItem('savannah_current_user');
-      if (saved) return JSON.parse(saved);
-    } catch {
-      // ignore
-    }
-    return null;
-  });
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
 
   // Sync Supabase Auth session if configured
   useEffect(() => {
-    if (isSupabaseConfigured && supabase) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session?.user) {
-          const profile: UserProfile = {
-            id: session.user.id,
-            name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Member',
-            email: session.user.email || '',
-            avatarUrl: session.user.user_metadata?.avatar_url,
-            provider: 'google'
-          };
-          setCurrentUser(profile);
-          localStorage.setItem('savannah_current_user', JSON.stringify(profile));
-        }
-      }).catch(err => console.warn('Supabase getSession error:', err));
+    const client = supabase;
 
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-        if (session?.user) {
-          const profile: UserProfile = {
-            id: session.user.id,
-            name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Member',
-            email: session.user.email || '',
-            avatarUrl: session.user.user_metadata?.avatar_url,
-            provider: 'google'
-          };
-          setCurrentUser(profile);
-          localStorage.setItem('savannah_current_user', JSON.stringify(profile));
-        } else if (_event === 'SIGNED_OUT') {
+    if (!isSupabaseConfigured || !client) {
+      setCurrentUser(null);
+      return;
+    }
+
+    const toUserProfile = (user: User): UserProfile => ({
+      id: user.id,
+      name:
+        user.user_metadata?.full_name ||
+        user.user_metadata?.name ||
+        user.email?.split('@')[0] ||
+        'Member',
+      email: user.email || '',
+      avatarUrl: user.user_metadata?.avatar_url,
+      provider: 'google'
+    });
+
+    let active = true;
+
+    client.auth
+      .getSession()
+      .then(({ data: { session }, error }) => {
+        if (!active) return;
+
+        if (error) {
+          console.warn('Supabase session error:', error.message);
           setCurrentUser(null);
-          localStorage.removeItem('savannah_current_user');
+          return;
+        }
+
+        setCurrentUser(
+          session?.user ? toUserProfile(session.user) : null
+        );
+      }).catch((error) => {
+        if (!active) return;
+        console.warn('Supabase session error:', error);
+        setCurrentUser(null);
+      });
+
+    const {
+      data: { subscription },
+    } = client.auth.onAuthStateChange((_event, session) => {
+      if (!active) return;
+
+      setCurrentUser(
+        session?.user ? toUserProfile(session.user) : null
+      );
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const signInWithGoogle = async (): Promise<void> => {
+    if (!isSupabaseConfigured || !supabase) {
+      showToast(
+        'Authentication is not configured. Please try again later.',
+        'warning'
+      );
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin
         }
       });
 
-      return () => {
-        subscription.unsubscribe();
-      };
+      if (error) {
+        console.error('Google OAuth error:', error.message);
+        showToast('Could not start Google sign-in. Please try again.', 'warning');
+      }
+    } catch (error) {
+      console.error('Google sign-in failed:', error);
+      showToast('Google sign-in failed. Please try again.', 'warning');
     }
-  }, []);
-
-  const signInWithGoogle = async (customUser?: Partial<UserProfile>) => {
-    // Artificial small delay for realistic authentication feedback
-    await new Promise(resolve => setTimeout(resolve, 450));
-
-    const googleUser: UserProfile = {
-      id: customUser?.id || 'usr_' + Math.floor(100000 + Math.random() * 900000),
-      name: customUser?.name?.trim() || 'Kelvin Munene',
-      email: customUser?.email?.trim() || 'klvnmunenembaya@gmail.com',
-      phone: customUser?.phone?.trim() || '+254 700 892 019',
-      avatarUrl: customUser?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-      provider: 'google'
-    };
-    setCurrentUser(googleUser);
-    try {
-      localStorage.setItem('savannah_current_user', JSON.stringify(googleUser));
-    } catch {
-      // ignore
-    }
-    showToast(`Signed in with Google as ${googleUser.email}`, 'success');
   };
 
   const signOut = async () => {
-    try {
-      if (isSupabaseConfigured && supabase) {
-        await supabase.auth.signOut();
-      }
-    } catch (e) {
-      console.warn('Sign out error:', e);
+    if (!supabase || !isSupabaseConfigured) {
+      setCurrentUser(null);
+      showToast('Authentication is not configured.', 'warning');
+      return;
     }
-    setCurrentUser(null);
-    localStorage.removeItem('savannah_current_user');
-    showToast('Signed out of session', 'info');
+
+    try {
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        console.error('Supabase sign-out error:', error.message);
+        showToast('Could not sign out. Please try again.', 'warning');
+        return;
+      }
+
+      setCurrentUser(null);
+      showToast('Signed out successfully.', 'info');
+    } catch (error) {
+      console.error('Sign-out failed:', error);
+      showToast('Could not sign out. Please try again.', 'warning');
+    }
   };
 
-  // Function to manually or programmatically sync categories, subcategories & products from Supabase
+
   const syncCategoriesFromSupabase = async (): Promise<boolean> => {
     try {
       const [cats, subcats, catalog] = await Promise.all([
@@ -358,42 +409,39 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       ]);
 
       let loadedCount = 0;
-      if (cats && cats.length > 0) {
+
+      if (cats?.length) {
         setCategoriesList(cats);
         loadedCount += cats.length;
       }
-      if (subcats && subcats.length > 0) {
+
+      if (subcats?.length) {
         setSubcategoriesList(subcats);
         loadedCount += subcats.length;
       }
-      if (catalog && catalog.products && catalog.products.length > 0) {
+
+      if (catalog?.products?.length) {
         setProducts(catalog.products);
         loadedCount += catalog.products.length;
       }
 
       if (loadedCount > 0) {
         setIsSupabaseLive(true);
-        showToast(`Connected to Supabase: Loaded ${catalog?.products?.length || 0} products & variants, ${cats?.length || 0} categories, ${subcats?.length || 0} subcategories!`, 'success');
+        showToast(
+          `Connected to Supabase: ${catalog?.products?.length ?? 0} products, ${cats?.length ?? 0} categories and ${subcats?.length ?? 0} subcategories loaded.`,
+          'success'
+        );
         return true;
       }
 
-      // If table is empty or returns 0 rows, attempt to trigger seed function
-      const seeded = await triggerSeedCategories();
-      if (seeded && seeded.length > 0) {
-        setCategoriesList(seeded);
-        const refreshedSubcats = await fetchRemoteSubcategories();
-        if (refreshedSubcats && refreshedSubcats.length > 0) {
-          setSubcategoriesList(refreshedSubcats);
-        }
-        setIsSupabaseLive(true);
-        showToast(`Seeded & connected ${seeded.length} categories from Supabase!`, 'success');
-        return true;
-      }
-
-      showToast('Connected to Supabase. Table awaiting categories seed or RLS policy.', 'info');
+      showToast(
+        'Connected to Supabase, but no remote catalog data was returned. Using local fallback data.',
+        'info'
+      );
       return false;
-    } catch (e: any) {
-      showToast(`Supabase sync error: ${e?.message || 'Check connection'}`, 'warning');
+    } catch (error) {
+      console.error('[Supabase] Catalog sync failed:', error);
+      showToast('Supabase sync failed. Check the connection and database permissions.', 'warning');
       return false;
     }
   };
@@ -579,50 +627,72 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   // Cart Handlers
+
+  const getCartIdentity = (product: Product) => ({
+    productId: product.id,
+    variantId: product.variantId ?? product.id,
+    allocationId:
+      product.selectedSpecification?.id ??
+      (product.selectedSpecification
+        ? `${product.selectedSpecification.product_specification}::${product.selectedSpecification.note ?? ''}`
+        : null)
+  });
+
+  const isSameCartItem = (a: Product, b: Product): boolean => {
+    const first = getCartIdentity(a);
+    const second = getCartIdentity(b);
+
+    return (
+      first.productId === second.productId &&
+      first.variantId === second.variantId &&
+      first.allocationId === second.allocationId
+    );
+  };
+
   const addToCart = (product: Product, quantity = 1) => {
+    if (quantity <= 0) return;
+
     setCart(prev => {
-      const existing = prev.find(
-        item =>
-          item.product.id === product.id &&
-          (!item.product.selectedSpecification ||
-            item.product.selectedSpecification.product_specification === product.selectedSpecification?.product_specification)
+      const existing = prev.find(item =>
+        isSameCartItem(item.product, product)
       );
+
       if (existing) {
         return prev.map(item =>
-          item === existing
+          isSameCartItem(item.product, product)
             ? { ...item, quantity: item.quantity + quantity }
             : item
         );
       }
+
       return [...prev, { product, quantity }];
     });
+
     const specLabel = product.selectedSpecification
       ? ` (${product.selectedSpecification.product_specification.replace(/_/g, ' ')})`
       : '';
+
     showToast(`Added ${product.name}${specLabel} to basket`);
   };
 
-  const removeFromCart = (productId: string, spec?: string) => {
+  const removeFromCart = (product: Product) => {
     setCart(prev =>
-      prev.filter(item => {
-        const matchesProduct = item.product.id === productId;
-        const matchesSpec = !spec || item.product.selectedSpecification?.product_specification === spec;
-        return !(matchesProduct && matchesSpec);
-      })
+      prev.filter(item => !isSameCartItem(item.product, product))
     );
   };
 
-  const updateQuantity = (productId: string, quantity: number, spec?: string) => {
+  const updateQuantity = (product: Product, quantity: number) => {
     if (quantity <= 0) {
-      removeFromCart(productId, spec);
+      removeFromCart(product);
       return;
     }
+
     setCart(prev =>
-      prev.map(item => {
-        const matchesProduct = item.product.id === productId;
-        const matchesSpec = !spec || item.product.selectedSpecification?.product_specification === spec;
-        return matchesProduct && matchesSpec ? { ...item, quantity } : item;
-      })
+      prev.map(item =>
+        isSameCartItem(item.product, product)
+          ? { ...item, quantity }
+          : item
+      )
     );
   };
 
@@ -630,64 +700,188 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setCart([]);
   };
 
-  // Create Order
+
+  // Create an order through the database.
+  // Payment initiation is a separate operation and is not performed here.
   const createOrder = async (orderData: {
     customerName: string;
     customerPhone: string;
-    customerEmail: string;
     deliveryAddress: string;
     deliverySlot: string;
+    deliveryMethod: 'express' | 'scheduled';
     dropoffNote?: string;
-    paymentMethod: 'mpesa' | 'card' | 'cod' | 'cash';
-    mpesaCode?: string;
   }): Promise<Order> => {
-    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const orderId = `SF-${randomSuffix}`;
-    const generatedMpesa = orderData.mpesaCode || `QKM${Math.floor(10000000 + Math.random() * 90000000)}WA`;
+    if (!supabase || !isSupabaseConfigured) {
+      throw new Error('The database connection is not available.');
+    }
 
-    const newOrder: Order = {
-      id: orderId,
-      customerName: orderData.customerName,
-      customerPhone: orderData.customerPhone,
-      customerEmail: orderData.customerEmail,
-      neighborhood: selectedNeighborhood,
-      deliveryAddress: orderData.deliveryAddress,
-      deliverySlot: orderData.deliverySlot,
-      dropoffNote: orderData.dropoffNote,
-      items: [...cart],
-      subtotal: cartSubtotal,
-      deliveryFee,
-      discount: 0,
-      total: cartTotal,
-      paymentMethod: orderData.paymentMethod,
-      mpesaCode: orderData.paymentMethod === 'mpesa' ? generatedMpesa : undefined,
-      paymentStatus: 'paid',
-      status: 'new',
-      createdAt: new Date().toISOString()
-    };
+    if (!currentUser?.id) {
+      throw new Error('Please sign in before placing an order.');
+    }
 
-    // Deduct stock from products
-    setProducts(prev =>
-      prev.map(prod => {
-        const cartItem = cart.find(ci => ci.product.id === prod.id);
-        if (cartItem) {
-          return {
-            ...prod,
-            stock: Math.max(0, prod.stock - cartItem.quantity)
-          };
-        }
-        return prod;
-      })
+    if (cart.length === 0) {
+      throw new Error('Your cart is empty.');
+    }
+
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !authData.user) {
+      throw new Error('Your session has expired. Please sign in again.');
+    }
+
+    const userId = authData.user.id;
+
+    // The create_order RPC reads the customer's name and phone from profiles.
+    // Omit mpesa_phone so an existing M-Pesa-specific number is preserved.
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .upsert(
+        {
+          id: userId,
+          display_name: orderData.customerName.trim(),
+          phone: orderData.customerPhone.trim(),
+        },
+        { onConflict: 'id' }
+      );
+
+    if (profileError) {
+      throw new Error(`Could not save your contact details: ${profileError.message}`);
+    }
+
+    const rpcItems = cart.map(({ product, quantity }) => {
+      const variantId = product.variantId ?? product.id;
+      const allocationId = product.selectedSpecification?.id;
+
+      if (!allocationId) {
+        throw new Error(
+          `Please reselect the specification for "${product.name}" before checkout.`
+        );
+      }
+
+      return {
+        variant_id: variantId,
+        specification_allocation_id: allocationId,
+        quantity,
+      };
+    });
+
+    const { data: createdOrderId, error: orderError } = await supabase.rpc(
+      'create_order',
+      {
+        p_items: rpcItems,
+        p_shipping_address: {
+          neighborhood_id: selectedNeighborhood.id,
+          delivery_method: orderData.deliveryMethod,
+          address: orderData.deliveryAddress.trim(),
+          delivery_slot: orderData.deliverySlot,
+        },
+        p_customer_note: orderData.dropoffNote?.trim() || undefined,
+      }
     );
 
-    // Save order
-    setOrders(prev => [newOrder, ...prev]);
-    clearCart();
+    if (orderError) {
+      throw new Error(`Could not create your order: ${orderError.message}`);
+    }
+
+    if (!createdOrderId) {
+      throw new Error('The database did not return an order ID.');
+    }
+
+    // The order now exists. Read its authoritative totals and item snapshots.
+    const { data: orderRow, error: readOrderError } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('id', createdOrderId)
+      .single();
+
+    if (readOrderError || !orderRow) {
+      // Do not leave the cart ready for accidental duplicate submission:
+      // the RPC has already created the order.
+      clearCart();
+      setIsCheckoutOpen(false);
+      setViewMode('orders');
+
+      throw new Error(
+        `Your order was created (${createdOrderId}), but its details could not be loaded. Check Orders before trying again.`
+      );
+    }
+
+    const { data: itemRows, error: readItemsError } = await supabase
+      .from('order_items')
+      .select('*')
+      .eq('order_id', createdOrderId);
+
+    if (readItemsError || !itemRows) {
+      clearCart();
+      setIsCheckoutOpen(false);
+      setViewMode('orders');
+
+      throw new Error(
+        `Your order was created (${createdOrderId}), but its items could not be loaded. Check Orders before trying again.`
+      );
+    }
+
+    const newOrder = mapDatabaseOrder(orderRow, itemRows, products);
+
+    setOrders(prev =>
+      [newOrder,
+        ...prev.filter(order => order.id !== newOrder.id)
+      ]);
     setActiveTrackOrder(newOrder);
-    setViewMode('orders');
-    showToast(`Order #${newOrder.id} confirmed! Preparing harvest basket.`, 'success');
 
     return newOrder;
+  };
+
+  const initiateKcbPayment: StoreContextType['initiateKcbPayment'] =
+    async (orderId, phoneNumber, idempotencyKey) => {
+      if (!supabase || !isSupabaseConfigured) {
+        throw new Error('The database connection is not available.');
+      }
+
+      const { data, error } = await supabase.functions.invoke<{
+        paymentId?: string;
+        status: string;
+        message?: string;
+        error?: string;
+        providerCode?: string;
+      }>('kcb-stk-push', {
+        body: {
+          orderId,
+          phoneNumber,
+          idempotencyKey,
+        },
+      });
+
+      if (error) {
+        // An HTTP response may contain an explicit provider rejection.
+        const response = (error as { context?: Response }).context;
+
+        if (response instanceof Response) {
+          const payload = await response.json().catch(() => null);
+
+          if (
+            payload?.status === 'failed' ||
+            payload?.status === 'unknown'
+          ) {
+            return payload;
+          }
+        }
+
+        // A network/relay error does not prove that KCB rejected the request.
+        return {
+          status: 'unknown',
+          error: 'Payment confirmation is uncertain. Do not retry automatically.',
+        };
+      }
+
+      if (!data || typeof data.status !== 'string') {
+        return {
+          status: 'unknown',
+          error: 'No reliable payment status was returned.',
+        };
+      }
+
+      return data;
   };
 
   // Update order status (Admin / Dispatcher)
@@ -748,33 +942,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     showToast(`Order #${orderId} removed`, 'info');
   };
 
-  // Confirm order M-Pesa payment
-  const confirmOrderPayment = (orderId: string, mpesaCode: string) => {
-    const validCode = mpesaCode.trim().toUpperCase() || `QKM${Math.floor(10000000 + Math.random() * 90000000)}WA`;
-    setOrders(prev =>
-      prev.map(order => {
-        if (order.id !== orderId) return order;
-        return {
-          ...order,
-          paymentStatus: 'paid',
-          paymentMethod: 'mpesa',
-          mpesaCode: validCode
-        };
-      })
-    );
-    setActiveTrackOrder(curr => {
-      if (curr && curr.id === orderId) {
-        return {
-          ...curr,
-          paymentStatus: 'paid',
-          paymentMethod: 'mpesa',
-          mpesaCode: validCode
-        };
-      }
-      return curr;
-    });
-    showToast(`Payment confirmed: ${validCode}`, 'success');
-  };
 
   // Inventory Updates
   const updateProductStock = (productId: string, newStock: number) => {
@@ -849,9 +1016,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         cartCount,
         orders,
         createOrder,
+        initiateKcbPayment,
         updateOrderStatus,
         deleteOrder,
-        confirmOrderPayment,
         updateProductStock,
         updateProductPrice,
         addNewProduct,

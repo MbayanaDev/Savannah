@@ -32,27 +32,6 @@ export async function fetchRemoteCategories(): Promise<CategoryInfo[] | null> {
 
     if (!catError && rawCats && rawCats.length > 0) {
       rows = rawCats as unknown as CategoryRow[];
-    } else {
-      // 2. Fallback to RPC function fn_get_categories or fn_seed_categories (bypasses RLS via SECURITY DEFINER)
-      try {
-        const { data: rpcCats, error: rpcErr } = await supabase.rpc('fn_get_categories');
-        if (!rpcErr && rpcCats && (rpcCats as any[]).length > 0) {
-          rows = rpcCats as unknown as CategoryRow[];
-        }
-      } catch (err) {
-        // fn_get_categories not present yet
-      }
-
-      if (rows.length === 0) {
-        try {
-          const { data: seedCats, error: seedErr } = await supabase.rpc('fn_seed_categories');
-          if (!seedErr && seedCats && (seedCats as any[]).length > 0) {
-            rows = seedCats as unknown as CategoryRow[];
-          }
-        } catch (err) {
-          // ignore
-        }
-      }
     }
 
     if (rows.length === 0) {
@@ -177,26 +156,6 @@ export async function fetchRemoteSubcategories(): Promise<SubcategoryItem[] | nu
   }
 }
 
-/**
- * Trigger Supabase fn_seed_categories() RPC to automatically populate or update categories
- */
-export async function triggerSeedCategories(): Promise<CategoryInfo[] | null> {
-  if (!isSupabaseConfigured || !supabase) return null;
-  try {
-    const { data, error } = await supabase.rpc('fn_seed_categories');
-    if (error) {
-      console.warn('[Supabase] fn_seed_categories RPC error:', error.message);
-      return null;
-    }
-    if (data && (data as any[]).length > 0) {
-      return await fetchRemoteCategories();
-    }
-    return null;
-  } catch (err) {
-    console.error('[Supabase] Trigger seed failed:', err);
-    return null;
-  }
-}
 
 /**
  * High-definition farm produce fallback images when image_url is null in Supabase.
@@ -565,6 +524,7 @@ export function parseVariantSpecifications(
   }
 
   return specs.map((item: any) => ({
+    id: typeof item.id === 'string' ? item.id : undefined,
     product_specification: item.product_specification || 'ripe',
     count: typeof item.count === 'number' ? item.count : fallbackStock,
     in_stock: item.in_stock !== undefined ? Boolean(item.in_stock) : true,
@@ -708,8 +668,9 @@ export async function fetchRemoteCatalog(): Promise<RemoteCatalogResult | null> 
       );
       const vPrice =
         typeof v.price === 'string' ? parseFloat(v.price) : Number(v.price) || 0;
-      const vStock =
-        v.stock_quantity > 0 ? v.stock_quantity : v.is_active ? 24 : 0;
+
+      const vStock = Math.max(0, Number(v.stock_quantity ?? 0));
+
       const vUnit = formatVariantUnit(v.name, vWeight, v.unit_quantity);
       const vImage =
         v.image_url ||
@@ -721,7 +682,10 @@ export async function fetchRemoteCatalog(): Promise<RemoteCatalogResult | null> 
         sub?.name || resolveSubcategoryByNameOrSku(v.name, v.sku);
 
       const parsedSpecs = parseVariantSpecifications(v.specifications, v.sku, vStock);
-      const defaultSpec = parsedSpecs[0];
+
+      const defaultSpec =
+        parsedSpecs.find(spec => spec.is_default ?? spec.isDefault) ??
+        parsedSpecs[0];
 
       const variantItem: ProductVariantItem = {
         id: v.id,

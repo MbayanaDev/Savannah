@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Plus, Minus, ChevronDown } from 'lucide-react';
 import { Product, VariantSpecification } from '../types';
 import { useStore } from '../context/StoreContext';
+import { isSameCartItem } from '../lib/cartIdentity';
 
 interface ProductCardProps {
   product: Product;
@@ -78,6 +79,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const variantProduct = useMemo(() => {
     return {
       ...product,
+      variantId: product.variants?.[0]?.id || product.variantId,
       price: displayPrice,
       compareAtPrice: compareAtPrice,
       stock: currentStock,
@@ -85,13 +87,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     };
   }, [product, displayPrice, compareAtPrice, currentStock, currentSpec]);
 
-  const cartItem = cart.find(
-    item =>
-      item.product.id === product.id &&
-      (!item.product.selectedSpecification ||
-        item.product.selectedSpecification.product_specification === currentSpec?.product_specification)
+  const cartItem = cart.find(item =>
+      isSameCartItem(item.product, variantProduct)
   );
-  const quantity = cartItem ? cartItem.quantity : 0;
+
+  const quantity = cartItem?.quantity ?? 0;
 
   // Top right pill reads key "tag" from specifications
   const specTag = currentSpec?.tag || product.selectedSpecification?.tag || specifications.find(s => s.tag)?.tag;
@@ -236,7 +236,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               <div className="flex items-center bg-stone-100 rounded-lg border border-stone-200 p-0.5 shadow-2xs">
                 <button
                   type="button"
-                  onClick={() => updateQuantity(product.id, quantity - 1, currentSpec?.product_specification)}
+                  onClick={() => updateQuantity(variantProduct, quantity - 1)}
                   className="w-6.5 h-6.5 flex items-center justify-center text-stone-700 hover:text-stone-900 active:scale-90 transition-transform cursor-pointer"
                   aria-label={`Decrease quantity of ${product.name}`}
                 >

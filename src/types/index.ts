@@ -22,6 +22,7 @@ export interface SubcategoryItem {
 }
 
 export interface VariantSpecification {
+  id?: string;
   product_specification: string;
   count: number;
   in_stock: boolean;
@@ -122,29 +123,50 @@ export interface CartItem {
   quantity: number;
 }
 
-export type OrderStatus = 'new' | 'packing' | 'out_for_delivery' | 'delivered';
+export type OrderStatus =
+  | 'pending_payment'
+  | 'new'
+  | 'packing'
+  | 'out_for_delivery'
+  | 'delivered';
+
+export type OrderPaymentStatus =
+  | 'not_started'
+  | 'pending'
+  | 'failed'
+  | 'unknown'
+  | 'paid';
 
 export interface Order {
   id: string;
+  orderNumber?: string;
+
   customerName: string;
   customerPhone: string;
   customerEmail: string;
+
   neighborhood: NairobiNeighborhood;
   deliveryAddress: string;
   deliverySlot: string;
   dropoffNote?: string;
+
   items: CartItem[];
+
   subtotal: number;
   deliveryFee: number;
   discount: number;
   total: number;
-  paymentMethod: 'mpesa' | 'card' | 'cod' | 'cash';
+
+  paymentMethod: 'mpesa' | 'card' | 'cod' | 'cash' | 'none';
   mpesaCode?: string;
-  paymentStatus: 'paid' | 'pending';
+  paymentStatus: OrderPaymentStatus;
+
   status: OrderStatus;
   createdAt: string;
+
   dispatchedAt?: string;
   deliveredAt?: string;
+
   riderName?: string;
   riderPhone?: string;
   riderVehicle?: string;
