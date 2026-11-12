@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  X, 
-  MapPin, 
-  Search, 
-  Check, 
-  Clock, 
-  Zap, 
-  Home, 
-  Briefcase, 
-  Users, 
-  Plus, 
+import React, { useState } from 'react';
+import {
+  X,
+  MapPin,
+  Search,
+  Check,
+  Clock,
+  Zap,
+  Home,
+  Briefcase,
+  Users,
+  Plus,
   Pencil,
   ArrowLeftRight
 } from 'lucide-react';
@@ -24,36 +24,22 @@ export const NeighborhoodModal: React.FC = () => {
     selectedNeighborhood,
     setSelectedNeighborhood,
     savedAddresses,
-    setSavedAddresses,
     selectedAddressId,
     selectAddress,
-    activeSavedAddress,
+    deliveryZones,
+    isLoadingAddresses,
+    isLoadingDeliveryZones,
+    addSavedAddress,
+    updateSavedAddress,
+    setDefaultSavedAddress,
     showToast
   } = useStore();
 
   const [activeTab, setActiveTab] = useState<'saved' | 'all'>('saved');
   const [search, setSearch] = useState('');
 
-  // Default address management
-  const [defaultAddressId, setDefaultAddressId] = useState<string>(() => {
-    try {
-      const saved = localStorage.getItem('arcana_default_address_id') || localStorage.getItem('savannah_default_address_id');
-      if (saved) return saved;
-    } catch (e) {
-      console.error(e);
-    }
-    return 'home';
-  });
+  const [isChangingDefault, setIsChangingDefault] = useState(false);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem('arcana_default_address_id', defaultAddressId);
-    } catch (e) {
-      console.error(e);
-    }
-  }, [defaultAddressId]);
-
-  const [isChangingDefault, setIsChangingDefault] = useState<boolean>(false);
   const [editingAddress, setEditingAddress] = useState<SavedAddress | null>(null);
   const [isAddingAddress, setIsAddingAddress] = useState<boolean>(false);
   const [isReplacingAddress, setIsReplacingAddress] = useState<boolean>(false);
@@ -70,120 +56,155 @@ export const NeighborhoodModal: React.FC = () => {
 
   if (!isNeighborhoodModalOpen) return null;
 
-  const preferredAddress = savedAddresses.find(a => a.id === defaultAddressId) || savedAddresses[0];
+  const getZoneName = (zoneId: string) =>
+    deliveryZones.find(zone => zone.zone_id === zoneId)?.name ?? zoneId;
 
-  const handleSelectDefault = (id: string) => {
-    setDefaultAddressId(id);
-    selectAddress(id);
-    const addr = savedAddresses.find(a => a.id === id);
-    showToast(`Default delivery address changed to ${addr?.label || 'selected address'}`, 'success');
-    setIsChangingDefault(false);
+  const handleSelectDefault = async (id: string) => {
+    try {
+      await setDefaultSavedAddress(id);
+      selectAddress(id);
+
+      const address = savedAddresses.find(item => item.id === id);
+      showToast(
+        `Default delivery address changed to ${address?.label || 'selected address'}`,
+        'success'
+      );
+
+      setIsChangingDefault(false);
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : 'Could not change the default address.',
+        'warning'
+      );
+    }
   };
 
-  const handleOpenEdit = (addr: SavedAddress) => {
+  const handleOpenEdit = (address: SavedAddress) => {
     setIsAddingAddress(false);
     setIsReplacingAddress(false);
-    setEditingAddress(addr);
+    setEditingAddress(address);
+
     setEditForm({
-      label: addr.label,
-      street: addr.street,
-      region: addr.region || '',
-      apartment: addr.apartment,
-      reference: addr.reference || '',
-      instructions: addr.instructions || ''
+      label: address.label,
+      street: address.street,
+      region: address.deliveryZoneId,
+      apartment: address.apartment,
+      reference: address.reference || '',
+      instructions: address.instructions || ''
     });
   };
 
   const handleOpenAdd = () => {
     setEditingAddress(null);
     setIsReplacingAddress(false);
+
     setEditForm({
       label: '',
       street: '',
-      region: 'Kilimani',
+      region: deliveryZones[0]?.zone_id ?? '',
       apartment: '',
       reference: '',
       instructions: ''
     });
+
     setIsAddingAddress(true);
   };
 
   const handleOpenReplace = () => {
     setEditingAddress(null);
     setIsAddingAddress(false);
-    const initialId = savedAddresses[0]?.id || '';
-    setAddressToReplaceId(initialId);
+
+    const initialAddress = savedAddresses[0];
+
+    if (!initialAddress) {
+      handleOpenAdd();
+      return;
+    }
+
+    setAddressToReplaceId(initialAddress.id);
+
     setEditForm({
       label: '',
       street: '',
-      region: 'Kilimani',
+      region: deliveryZones[0]?.zone_id ?? '',
       apartment: '',
       reference: '',
       instructions: ''
     });
+
     setIsReplacingAddress(true);
   };
 
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editForm.label.trim() || !editForm.street.trim() || !editForm.apartment.trim()) {
-      showToast('Please fill in label, street, and apartment/house number', 'warning');
+
+    if (
+      !editForm.label.trim() ||
+      !editForm.street.trim() ||
+      !editForm.apartment.trim() ||
+      !editForm.region
+    ) {
+      showToast('Please complete all required address fields.', 'warning');
       return;
     }
 
-    if (isReplacingAddress) {
-      const targetAddr = savedAddresses.find(a => a.id === addressToReplaceId) || savedAddresses[0];
-      const targetId = targetAddr.id;
-      const replacedAddress: SavedAddress = {
-        id: targetId,
-        label: editForm.label.trim() || 'New Place',
-        tag: targetAddr.tag || 'Saved',
-        iconName: targetAddr.iconName || 'pin',
-        street: editForm.street.trim(),
-        region: editForm.region.trim() || 'Nairobi',
-        apartment: editForm.apartment.trim(),
-        reference: editForm.reference.trim(),
-        instructions: editForm.instructions.trim()
-      };
-      setSavedAddresses(prev => prev.map(a => a.id === targetId ? replacedAddress : a));
-      selectAddress(targetId);
-      showToast(`Replaced "${targetAddr.label}" with "${replacedAddress.label}"`, 'success');
-      setIsReplacingAddress(false);
-      return;
-    }
+    const addressFields = {
+      label: editForm.label.trim(),
+      tag: editForm.label.trim(),
+      street: editForm.street.trim(),
+      region: getZoneName(editForm.region),
+      deliveryZoneId: editForm.region,
+      apartment: editForm.apartment.trim(),
+      reference: editForm.reference.trim(),
+      instructions: editForm.instructions.trim(),
+      iconName: 'pin' as const
+    };
 
-    if (isAddingAddress) {
-      const newAddress: SavedAddress = {
-        id: `addr_${Date.now()}`,
-        label: editForm.label.trim() || 'New Place',
-        tag: 'Saved',
-        iconName: 'pin',
-        street: editForm.street.trim(),
-        region: editForm.region.trim() || 'Nairobi',
-        apartment: editForm.apartment.trim(),
-        reference: editForm.reference.trim(),
-        instructions: editForm.instructions.trim()
-      };
-      setSavedAddresses(prev => [...prev, newAddress]);
-      selectAddress(newAddress.id);
-      showToast(`Added new address "${newAddress.label}"`, 'success');
-      setIsAddingAddress(false);
-      return;
-    }
+    try {
+      if (isReplacingAddress) {
+        const targetAddress = savedAddresses.find(
+          address => address.id === addressToReplaceId
+        );
 
-    if (editingAddress) {
-      const updated: SavedAddress = {
-        ...editingAddress,
-        label: editForm.label.trim() || editingAddress.label,
-        street: editForm.street.trim() || editingAddress.street,
-        region: editForm.region.trim() || editingAddress.region,
-        apartment: editForm.apartment.trim() || editingAddress.apartment,
-        reference: editForm.reference.trim(),
-        instructions: editForm.instructions.trim()
-      };
-      setSavedAddresses(prev => prev.map(a => a.id === editingAddress.id ? updated : a));
-      showToast(`Saved changes to "${updated.label}"`, 'success');
-      setEditingAddress(null);
+        if (!targetAddress) {
+          showToast('Select an address to replace.', 'warning');
+          return;
+        }
+
+        await updateSavedAddress({
+          ...targetAddress,
+          ...addressFields
+        });
+
+        selectAddress(targetAddress.id);
+        showToast(`Replaced "${targetAddress.label}" with "${addressFields.label}"`, 'success');
+        setIsReplacingAddress(false);
+        return;
+      }
+
+      if (isAddingAddress) {
+        const newAddress = await addSavedAddress(addressFields);
+
+        selectAddress(newAddress.id);
+        showToast(`Added new address "${newAddress.label}"`, 'success');
+        setIsAddingAddress(false);
+        return;
+      }
+
+      if (editingAddress) {
+        await updateSavedAddress({
+          ...editingAddress,
+          ...addressFields
+        });
+
+        showToast(`Saved changes to "${addressFields.label}"`, 'success');
+        setEditingAddress(null);
+      }
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : 'Could not save the address.',
+        'warning'
+      );
     }
   };
 
@@ -217,6 +238,9 @@ export const NeighborhoodModal: React.FC = () => {
         return <MapPin className="w-3.5 h-3.5 text-emerald-700 shrink-0" />;
     }
   };
+
+  const preferredAddress =
+    savedAddresses.find(address => address.isDefault) ?? savedAddresses[0];
 
   return (
     <div 
@@ -387,87 +411,116 @@ export const NeighborhoodModal: React.FC = () => {
                   </div>
                 </div>
 
-                {/* 2 Column by n Rows Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
-                  {savedAddresses.map((addr) => {
-                    const Icon = getAddressIcon(addr.iconName);
-                    const isSelected = selectedAddressId === addr.id;
+                {/* Saved Addresses: Loading, Empty State, or Address Grid */}
+                {isLoadingAddresses ? (
+                  <div className="py-8 text-center text-xs text-stone-500">
+                    Loading your saved addresses...
+                  </div>
+                ) : savedAddresses.length === 0 ? (
+                  <div className="py-8 px-4 text-center bg-stone-50/70 rounded-xl border border-dashed border-stone-300">
+                    <MapPin className="w-6 h-6 text-stone-400 mx-auto mb-2" />
 
-                    return (
-                      <div
-                        key={addr.id}
-                        onClick={() => handleSelectSaved(addr)}
-                        className={`group relative flex flex-col justify-between p-3 rounded-xl border transition-all cursor-pointer text-left ${
-                          isSelected
-                            ? 'bg-emerald-50/20 border-emerald-700 shadow-xs ring-1 ring-emerald-700/20'
-                            : 'bg-white hover:bg-stone-50/70 border-stone-200/90 hover:border-stone-300 shadow-2xs'
-                        }`}
-                      >
-                        {/* Content Ordered Row by Row (with wrapping enabled) */}
-                        <div className="space-y-1">
-                          {/* Row 1: Header with Leading Icon, Label, and Edit Button on the Top Right */}
-                          <div className="flex items-center justify-between gap-1.5 mb-0.5">
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              {Icon}
-                              <span className="font-display font-bold text-stone-900 text-xs break-words">
-                                {addr.label}
-                              </span>
-                              {isSelected && (
-                                <span className="text-[9px] font-semibold bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded leading-none shrink-0">
-                                  Active
+                    <p className="text-sm font-semibold text-stone-700">
+                      No saved addresses yet
+                    </p>
+
+                    <p className="text-xs text-stone-500 mt-1">
+                      Add your first delivery address to make checkout easier.
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={handleOpenAdd}
+                      disabled={isLoadingDeliveryZones || deliveryZones.length === 0}
+                      className="mt-3 inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#173b28] hover:bg-[#1f4e35] text-white text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      Add Delivery Address
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+                    {savedAddresses.map((addr) => {
+                      const Icon = getAddressIcon(addr.iconName);
+                      const isSelected = selectedAddressId === addr.id;
+
+                      return (
+                        <div
+                          key={addr.id}
+                          onClick={() => handleSelectSaved(addr)}
+                          className={`group relative flex flex-col justify-between p-3 rounded-xl border transition-all cursor-pointer text-left ${
+                            isSelected
+                              ? 'bg-emerald-50/20 border-emerald-700 shadow-xs ring-1 ring-emerald-700/20'
+                              : 'bg-white hover:bg-stone-50/70 border-stone-200/90 hover:border-stone-300 shadow-2xs'
+                          }`}
+                        >
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between gap-1.5 mb-0.5">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                {Icon}
+
+                                <span className="font-display font-bold text-stone-900 text-xs break-words">
+                                  {addr.label}
                                 </span>
-                              )}
+
+                                {addr.isDefault && (
+                                  <span className="text-[9px] font-semibold bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded leading-none shrink-0">
+                                    Default
+                                  </span>
+                                )}
+
+                                {isSelected && (
+                                  <span className="text-[9px] font-semibold bg-stone-100 text-stone-700 px-1.5 py-0.2 rounded leading-none shrink-0">
+                                    Selected
+                                  </span>
+                                )}
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenEdit(addr);
+                                }}
+                                className="w-5 h-5 flex items-center justify-center rounded text-stone-400 hover:text-stone-700 hover:bg-stone-200/60 transition-colors cursor-pointer shrink-0"
+                                title={`Edit ${addr.label}`}
+                                aria-label={`Edit ${addr.label}`}
+                              >
+                                <Pencil className="w-2.5 h-2.5 text-stone-500" />
+                              </button>
                             </div>
-                            {/* Edit Icon Button at top right of the container */}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleOpenEdit(addr);
-                              }}
-                              className="w-5 h-5 flex items-center justify-center rounded text-stone-400 hover:text-stone-700 hover:bg-stone-200/60 transition-colors cursor-pointer shrink-0"
-                              title={`Edit ${addr.label}`}
-                              aria-label={`Edit ${addr.label}`}
-                            >
-                              <Pencil className="w-2.5 h-2.5 text-stone-500" />
-                            </button>
+
+                            <div className="text-stone-800 text-xs font-semibold leading-snug break-words">
+                              {addr.street}
+                            </div>
+
+                            {addr.region && (
+                              <div className="text-emerald-800 text-[11px] font-medium leading-snug break-words">
+                                {addr.region}
+                              </div>
+                            )}
+
+                            <div className="text-stone-600 text-[11.5px] leading-snug break-words">
+                              {addr.apartment}
+                            </div>
+
+                            {addr.reference && (
+                              <div className="text-stone-400 text-[10px] leading-tight break-words">
+                                {addr.reference}
+                              </div>
+                            )}
+
+                            {addr.instructions && (
+                              <div className="pt-0.5 mt-0.5 text-[10.5px] text-stone-500 italic leading-snug break-words">
+                                &ldquo;{addr.instructions}&rdquo;
+                              </div>
+                            )}
                           </div>
-
-                          {/* Row 2: Street / Road */}
-                          <div className="text-stone-800 text-xs font-semibold leading-snug break-words">
-                            {addr.street}
-                          </div>
-
-                          {/* Row 3: Delivery Region (e.g. Kilimani, Lavington) */}
-                          {addr.region && (
-                            <div className="text-emerald-800 text-[11px] font-medium leading-snug break-words">
-                              {addr.region}
-                            </div>
-                          )}
-
-                          {/* Row 4: Apartment & House Number */}
-                          <div className="text-stone-600 text-[11.5px] leading-snug break-words">
-                            {addr.apartment}
-                          </div>
-
-                          {/* Row 5: Reference (smaller font) */}
-                          {addr.reference && (
-                            <div className="text-stone-400 text-[10px] leading-tight break-words">
-                              {addr.reference}
-                            </div>
-                          )}
-
-                          {/* Row 6: Description / Instructions */}
-                          {addr.instructions && (
-                            <div className="pt-0.5 mt-0.5 text-[10.5px] text-stone-500 italic leading-snug break-words">
-                              &ldquo;{addr.instructions}&rdquo;
-                            </div>
-                          )}
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -692,16 +745,28 @@ export const NeighborhoodModal: React.FC = () => {
 
               <div>
                 <label className="block font-medium text-stone-700 mb-1">
-                  Delivery Region / Area
+                  Delivery Zone
                 </label>
-                <input
-                  type="text"
+
+                <select
                   required
                   value={editForm.region}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, region: e.target.value }))}
-                  className="w-full px-3 py-1.5 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-700/20 focus:border-emerald-700 text-stone-900"
-                  placeholder="e.g. Kilimani, Lavington, Westlands"
-                />
+                  onChange={e =>
+                    setEditForm(prev => ({ ...prev, region: e.target.value }))
+                  }
+                  disabled={isLoadingDeliveryZones || deliveryZones.length === 0}
+                  className="w-full px-3 py-1.5 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-700/20 focus:border-emerald-700 text-stone-900 disabled:bg-stone-100"
+                >
+                  <option value="">
+                    {isLoadingDeliveryZones ? 'Loading delivery zones...' : 'Select a delivery zone'}
+                  </option>
+
+                  {deliveryZones.map(zone => (
+                    <option key={zone.zone_id} value={zone.zone_id}>
+                      {zone.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -798,7 +863,7 @@ export const NeighborhoodModal: React.FC = () => {
             <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
               {savedAddresses.map((addr) => {
                 const Icon = getAddressIcon(addr.iconName);
-                const isCurrentDefault = defaultAddressId === addr.id;
+                const isCurrentDefault = addr.id;
                 return (
                   <div
                     key={addr.id}

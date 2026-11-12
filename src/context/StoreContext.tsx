@@ -1,8 +1,26 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Product, NairobiNeighborhood, CartItem, Order, Category, CategoryInfo, SubcategoryItem, OrderStatus, SavedAddress, UserProfile, ViewMode } from '../types';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+} from 'react';
+import {
+  Product,
+  NairobiNeighborhood,
+  DeliveryZone,
+  CartItem,
+  Order,
+  Category,
+  CategoryInfo,
+  SubcategoryItem,
+  OrderStatus,
+  SavedAddress,
+  UserProfile,
+  ViewMode,
+} from '../types';
 import { INITIAL_PRODUCTS, CATEGORIES_CONFIG, SUBCATEGORIES_CONFIG } from '../data/products';
 import { NAIROBI_NEIGHBORHOODS, DEFAULT_NEIGHBORHOOD } from '../data/neighborhoods';
-import { INITIAL_SAVED_ADDRESSES } from '../data/savedAddresses';
 import { SEED_ORDERS } from '../data/seedOrders';
 import {
   fetchRemoteCatalog,
@@ -15,6 +33,11 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import { isSameCartItem } from '../lib/cartIdentity';
 import { mapDatabaseOrder } from '../lib/orderMappers';
+import {
+  cartToDatabaseRows,
+  restoreCartFromDatabase,
+  mergeCartItems,
+} from '../lib/cartPersistence';
 
 interface StoreContextType {
   products: Product[];
@@ -34,14 +57,26 @@ interface StoreContextType {
   setSearchQuery: (q: string) => void;
   selectedNeighborhood: NairobiNeighborhood;
   setSelectedNeighborhood: (n: NairobiNeighborhood) => void;
+
+  deliveryZones: DeliveryZone[];
+  isLoadingDeliveryZones: boolean;
+  isLoadingAddresses: boolean;
+
+  isCartReady: boolean;
+
   savedAddresses: SavedAddress[];
-  setSavedAddresses: React.Dispatch<React.SetStateAction<SavedAddress[]>>;
   selectedAddressId: string;
-  setSelectedAddressId: (id: string) => void;
   activeSavedAddress: SavedAddress | undefined;
+
   selectAddress: (id: string) => void;
-  addSavedAddress: (addr: Omit<SavedAddress, 'id'>) => SavedAddress;
-  updateSavedAddress: (addr: SavedAddress) => void;
+
+  addSavedAddress: (
+    addr: Omit<SavedAddress, 'id' | 'isDefault'> & { isDefault?: boolean }
+  ) => Promise<SavedAddress>;
+
+  updateSavedAddress: (addr: SavedAddress) => Promise<void>;
+  deleteSavedAddress: (id: string) => Promise<void>;
+  setDefaultSavedAddress: (id: string) => Promise<void>;
   cart: CartItem[];
   addToCart: (product: Product, quantity?: number) => void;
 
@@ -142,94 +177,330 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return DEFAULT_NEIGHBORHOOD;
   });
 
-  // Saved addresses state (persisted)
-  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>(() => {
-    try {
-      const saved = localStorage.getItem('savannah_saved_addresses');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+  // Authentication State
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+
+  const [isAuthReady, setIsAuthReady] = useState(false);
+  const [isCartReady, setIsCartReady] = useState(false);
+
+  // Delivery zones are managed centrally in Supabase.
+  const [deliveryZones, setDeliveryZones] = useState<DeliveryZone[]>([]);
+  const [isLoadingDeliveryZones, setIsLoadingDeliveryZones] = useState(true);
+
+  // Saved addresses belong to the authenticated customer.
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState('');
+
+  const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
+
+  const mapCustomerAddress = (
+    row: {
+      id: string;
+      label: string;
+      street_road: string;
+      delivery_zone_id: string;
+      building_house_number: string | null;
+      landmark: string | null;
+      delivery_instructions: string | null;
+      is_default: boolean;
+    },
+    zones: DeliveryZone[]
+  ): SavedAddress => {
+    const zone = zones.find(z => z.zone_id === row.delivery_zone_id);
+
+    return {
+      id: row.id,
+      label: row.label,
+      tag: row.label,
+      street: row.street_road,
+      region: zone?.name ?? row.delivery_zone_id,
+      deliveryZoneId: row.delivery_zone_id,
+      apartment: row.building_house_number ?? '',
+      reference: row.landmark ?? '',
+      instructions: row.delivery_instructions ?? '',
+      isDefault: row.is_default,
+      iconName: 'pin',
+    };
+  };
+
+  // Load active delivery zones.
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadDeliveryZones = async () => {
+      if (!supabase || !isSupabaseConfigured) {
+        setDeliveryZones([]);
+        setIsLoadingDeliveryZones(false);
+        return;
       }
-    } catch (e) {
-      console.error(e);
-    }
-    return INITIAL_SAVED_ADDRESSES;
-  });
 
-  const [selectedAddressId, setSelectedAddressId] = useState<string>(() => {
-    try {
-      const saved = localStorage.getItem('savannah_selected_address_id');
-      if (saved) return saved;
-    } catch (e) {
-      console.error(e);
-    }
-    return 'home';
-  });
+      setIsLoadingDeliveryZones(true);
 
+      const { data, error } = await supabase
+        .from('delivery_zones')
+        .select(
+          'zone_id, name, delivery_fee_minor, free_threshold_minor, express_available, is_active'
+        )
+        .eq('is_active', true)
+        .order('name');
+
+      if (cancelled) return;
+
+      if (error) {
+        console.error('[Supabase] Could not load delivery zones:', error);
+        setDeliveryZones([]);
+      } else {
+        setDeliveryZones((data ?? []) as DeliveryZone[]);
+      }
+
+      setIsLoadingDeliveryZones(false);
+    };
+
+    void loadDeliveryZones();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Load the address book whenever the authenticated user changes.
   useEffect(() => {
-    try {
-      localStorage.setItem('savannah_saved_addresses', JSON.stringify(savedAddresses));
-    } catch (e) {
-      console.error(e);
-    }
-  }, [savedAddresses]);
+    let cancelled = false;
 
-  useEffect(() => {
-    try {
-      localStorage.setItem('savannah_selected_address_id', selectedAddressId);
-    } catch (e) {
-      console.error(e);
-    }
-  }, [selectedAddressId]);
+    const loadAddresses = async () => {
+      if (!currentUser?.id || !supabase || !isSupabaseConfigured) {
+        setSavedAddresses([]);
+        setSelectedAddressId('');
+        setIsLoadingAddresses(false);
+        return;
+      }
 
-  const activeSavedAddress = savedAddresses.find(a => a.id === selectedAddressId) || savedAddresses[0];
+      setIsLoadingAddresses(true);
+
+      const { data, error } = await supabase
+        .from('customer_addresses')
+        .select(`
+          id,
+          label,
+          street_road,
+          delivery_zone_id,
+          building_house_number,
+          landmark,
+          delivery_instructions,
+          is_default
+        `)
+        .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: true });
+
+      if (cancelled) return;
+
+      if (error) {
+        console.error('[Supabase] Could not load saved addresses:', error);
+        setSavedAddresses([]);
+        setSelectedAddressId('');
+      } else {
+        const addresses = (data ?? []).map(row =>
+          mapCustomerAddress(row, deliveryZones)
+        );
+
+        setSavedAddresses(addresses);
+
+        const defaultAddress = addresses.find(address => address.isDefault);
+        setSelectedAddressId(defaultAddress?.id ?? addresses[0]?.id ?? '');
+      }
+
+      setIsLoadingAddresses(false);
+    };
+
+    void loadAddresses();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser?.id, deliveryZones]);
+
+  const activeSavedAddress = savedAddresses.find(
+    address => address.id === selectedAddressId
+  );
 
   const selectAddress = (id: string) => {
-    const addr = savedAddresses.find(a => a.id === id);
-    if (!addr) return;
+    const address = savedAddresses.find(item => item.id === id);
+
+    if (!address) return;
+
     setSelectedAddressId(id);
+    showToast(`Delivery location set to ${address.label}`, 'success');
+  };
 
-    // Sync neighborhood
-    const regionLower = addr.region.toLowerCase();
-    const matchingNeighborhood = NAIROBI_NEIGHBORHOODS.find(n =>
-      n.name.toLowerCase().includes(regionLower) ||
-      regionLower.includes(n.id.toLowerCase()) ||
-      n.popularEstate.toLowerCase().includes(regionLower)
-    );
-    if (matchingNeighborhood) {
-      setSelectedNeighborhood(matchingNeighborhood);
+  const addSavedAddress: StoreContextType['addSavedAddress'] = async input => {
+    if (!supabase || !currentUser?.id) {
+      throw new Error('Please sign in before saving an address.');
     }
-    showToast(`Delivery location set to ${addr.label} (${addr.region})`, 'success');
+
+    const { data, error } = await supabase
+      .from('customer_addresses')
+      .insert({
+        user_id: currentUser.id,
+        label: input.label.trim(),
+        street_road: input.street.trim(),
+        delivery_zone_id: input.deliveryZoneId,
+        building_house_number: input.apartment.trim() || null,
+        landmark: input.reference.trim() || null,
+        delivery_instructions: input.instructions.trim() || null,
+        is_default: input.isDefault ?? savedAddresses.length === 0,
+      })
+      .select(`
+        id,
+        label,
+        street_road,
+        delivery_zone_id,
+        building_house_number,
+        landmark,
+        delivery_instructions,
+        is_default
+      `)
+      .single();
+
+    if (error || !data) {
+      throw new Error(error?.message ?? 'Could not save address.');
+    }
+
+    const newAddress = mapCustomerAddress(data, deliveryZones);
+
+    setSavedAddresses(previous => [
+      ...previous.filter(address => address.id !== newAddress.id),
+      newAddress,
+    ]);
+
+    if (newAddress.isDefault || !selectedAddressId) {
+      setSelectedAddressId(newAddress.id);
+    }
+
+    showToast(`Saved "${newAddress.label}" address`, 'success');
+
+    return newAddress;
   };
 
-  const addSavedAddress = (newAddrData: Omit<SavedAddress, 'id'>): SavedAddress => {
-    const newAddr: SavedAddress = {
-      ...newAddrData,
-      id: `addr_${Date.now()}`
+  const updateSavedAddress: StoreContextType['updateSavedAddress'] = async address => {
+    if (!supabase || !currentUser?.id) {
+      throw new Error('Please sign in before updating an address.');
+    }
+
+    const { data, error } = await supabase
+      .from('customer_addresses')
+      .update({
+        label: address.label.trim(),
+        street_road: address.street.trim(),
+        delivery_zone_id: address.deliveryZoneId,
+        building_house_number: address.apartment.trim() || null,
+        landmark: address.reference.trim() || null,
+        delivery_instructions: address.instructions.trim() || null,
+        is_default: address.isDefault,
+      })
+      .eq('id', address.id)
+      .eq('user_id', currentUser.id)
+      .select(`
+        id,
+        label,
+        street_road,
+        delivery_zone_id,
+        building_house_number,
+        landmark,
+        delivery_instructions,
+        is_default
+      `)
+      .single();
+
+    if (error || !data) {
+      throw new Error(error?.message ?? 'Could not update address.');
+    }
+
+    const updatedAddress = mapCustomerAddress(data, deliveryZones);
+
+    setSavedAddresses(previous =>
+      previous.map(item =>
+        item.id === updatedAddress.id
+          ? updatedAddress
+          : updatedAddress.isDefault
+            ? { ...item, isDefault: false }
+            : item
+      )
+    );
+
+    showToast(`Updated "${updatedAddress.label}" address`, 'success');
+  };
+
+  const deleteSavedAddress: StoreContextType['deleteSavedAddress'] = async id => {
+    if (!supabase || !currentUser?.id) {
+      throw new Error('Please sign in before deleting an address.');
+    }
+
+    const { error } = await supabase
+      .from('customer_addresses')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', currentUser.id);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    // Reload because the database may have promoted another address
+    // to default after deletion.
+    const { data, error: reloadError } = await supabase
+      .from('customer_addresses')
+      .select(`
+        id,
+        label,
+        street_road,
+        delivery_zone_id,
+        building_house_number,
+        landmark,
+        delivery_instructions,
+        is_default
+      `)
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: true });
+
+    if (reloadError) {
+      throw new Error(reloadError.message);
+    }
+
+    const addresses = (data ?? []).map(row =>
+      mapCustomerAddress(row, deliveryZones)
+    );
+
+    setSavedAddresses(addresses);
+
+    if (!addresses.some(address => address.id === selectedAddressId)) {
+      const defaultAddress = addresses.find(address => address.isDefault);
+      setSelectedAddressId(defaultAddress?.id ?? addresses[0]?.id ?? '');
+    }
+
+    showToast('Address deleted', 'success');
+  };
+
+  const setDefaultSavedAddress: StoreContextType['setDefaultSavedAddress'] =
+    async id => {
+      const address = savedAddresses.find(item => item.id === id);
+
+      if (!address) {
+        throw new Error('Address not found.');
+      }
+
+      await updateSavedAddress({
+        ...address,
+        isDefault: true,
+      });
+
+      setSelectedAddressId(id);
     };
-    setSavedAddresses(prev => [...prev, newAddr]);
-    selectAddress(newAddr.id);
-    return newAddr;
-  };
-
-  const updateSavedAddress = (updated: SavedAddress) => {
-    setSavedAddresses(prev => prev.map(a => a.id === updated.id ? updated : a));
-    showToast(`Updated "${updated.label}" address`, 'success');
-  };
 
   // Cart
-  const [cart, setCart] = useState<CartItem[]>(() => {
-    try {
-      const saved = localStorage.getItem('savannah_cart');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.error(e);
-    }
-    return [
-      { product: INITIAL_PRODUCTS[0], quantity: 2 }, // start with fresh avocados in cart for delightful first touch
-      { product: INITIAL_PRODUCTS[1], quantity: 1 }  // and fresh organic greens
-    ];
-  });
+  const cartSyncQueue = useRef<Promise<void>>(Promise.resolve());
+
+  // Cart starts empty until the guest or account cart has been loaded.
+  const [cart, setCart] = useState<CartItem[]>([]);
 
   // Orders
   const [orders, setOrders] = useState<Order[]>(() => {
@@ -238,7 +509,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const filtered = parsed.filter((o: any) => o.id !== 'SF-89209' && o.id !== 'SF-89208');
+          const filtered = parsed.filter(
+            (o: any) => o.id !== 'SF-89209' && o.id !== 'SF-89208'
+          );
           localStorage.setItem('savannah_orders_v4', JSON.stringify(filtered));
           return filtered;
         }
@@ -256,6 +529,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       console.error(e);
     }
   }, [orders]);
+
 
   // Filters & Navigation
   const [selectedCategory, setSelectedCategoryState] = useState<Category>('All');
@@ -286,8 +560,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [categoriesList, setCategoriesList] = useState<CategoryInfo[]>(CATEGORIES_CONFIG);
   const [subcategoriesList, setSubcategoriesList] = useState<SubcategoryItem[]>(SUBCATEGORIES_CONFIG);
 
-  // Authentication State
-  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
 
   // Sync Supabase Auth session if configured
   useEffect(() => {
@@ -295,6 +567,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     if (!isSupabaseConfigured || !client) {
       setCurrentUser(null);
+      setIsAuthReady(true);
       return;
     }
 
@@ -307,30 +580,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         'Member',
       email: user.email || '',
       avatarUrl: user.user_metadata?.avatar_url,
-      provider: 'google'
+      provider: 'google',
     });
 
     let active = true;
-
-    client.auth
-      .getSession()
-      .then(({ data: { session }, error }) => {
-        if (!active) return;
-
-        if (error) {
-          console.warn('Supabase session error:', error.message);
-          setCurrentUser(null);
-          return;
-        }
-
-        setCurrentUser(
-          session?.user ? toUserProfile(session.user) : null
-        );
-      }).catch((error) => {
-        if (!active) return;
-        console.warn('Supabase session error:', error);
-        setCurrentUser(null);
-      });
 
     const {
       data: { subscription },
@@ -340,13 +593,223 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setCurrentUser(
         session?.user ? toUserProfile(session.user) : null
       );
+      setIsAuthReady(true);
     });
+
+    client.auth
+      .getSession()
+      .then(({ data: { session }, error }) => {
+        if (!active) return;
+
+        if (error) {
+          console.warn('[Auth] Could not restore session:', error.message);
+          setCurrentUser(null);
+        } else {
+          setCurrentUser(
+            session?.user ? toUserProfile(session.user) : null
+          );
+        }
+
+        setIsAuthReady(true);
+      })
+      .catch((error) => {
+        if (!active) return;
+
+        console.warn('[Auth] Session initialization failed:', error);
+        setCurrentUser(null);
+        setIsAuthReady(true);
+      });
 
     return () => {
       active = false;
       subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (!isAuthReady) return;
+
+    let cancelled = false;
+
+    const loadCart = async () => {
+      setIsCartReady(false);
+
+      // Guest cart: this browser only.
+      if (!currentUser?.id) {
+        try {
+          const saved = localStorage.getItem('savannah_guest_cart');
+          const guestCart: CartItem[] = saved ? JSON.parse(saved) : [];
+
+          if (!cancelled) {
+            setCart(Array.isArray(guestCart) ? guestCart : []);
+            setIsCartReady(true);
+          }
+        } catch (error) {
+          console.error('[Cart] Could not restore guest cart:', error);
+
+          if (!cancelled) {
+            setCart([]);
+            setIsCartReady(true);
+          }
+        }
+
+        return;
+      }
+
+      if (!supabase || !isSupabaseConfigured) {
+        if (!cancelled) setIsCartReady(true);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('user_cart_items')
+          .select(
+            'user_id, variant_id, specification_allocation_id, quantity'
+          )
+          .eq('user_id', currentUser.id);
+
+        if (error) throw error;
+
+        const accountCart = restoreCartFromDatabase(
+          data ?? [],
+          products
+        );
+
+        const guestCart: CartItem[] = JSON.parse(
+          localStorage.getItem('savannah_guest_cart') || '[]'
+        );
+
+        const mergedCart = mergeCartItems(accountCart, guestCart);
+
+        // Save the merged cart before removing the guest copy.
+        const rows = cartToDatabaseRows(currentUser.id, mergedCart);
+
+        if (rows.length > 0) {
+          const { error: saveError } = await supabase
+            .from('user_cart_items')
+            .upsert(rows, {
+              onConflict:
+                'user_id,variant_id,specification_allocation_id',
+            });
+
+          if (saveError) throw saveError;
+        }
+
+        if (cancelled) return;
+
+        localStorage.removeItem('savannah_guest_cart');
+        setCart(mergedCart);
+        setIsCartReady(true);
+      } catch (error) {
+        console.error('[Cart] Could not restore account cart:', error);
+        if (!cancelled) {
+          showToast(
+            'Could not load your saved cart. Please refresh and try again.',
+            'warning'
+          );
+        }
+      }
+    };
+
+    void loadCart();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthReady, currentUser?.id, isSupabaseLive, products]);
+
+  useEffect(() => {
+    // Only synchronize after authentication and cart hydration are complete.
+    if (
+      !isAuthReady ||
+      !isCartReady ||
+      !currentUser?.id ||
+      !supabase ||
+      !isSupabaseConfigured
+    ) {
+      return;
+    }
+
+    const userId = currentUser.id;
+    const cartSnapshot = cart;
+
+    cartSyncQueue.current = cartSyncQueue.current
+      .catch(() => {
+        // Keep the queue usable after a previous failed synchronization.
+      })
+      .then(async () => {
+        if (!supabase) return;
+
+        // Read existing rows so we can remove items no longer in the cart.
+        const { data: existingRows, error: readError } = await supabase
+          .from('user_cart_items')
+          .select(
+            'variant_id, specification_allocation_id'
+          )
+          .eq('user_id', userId);
+
+        if (readError) throw readError;
+
+        // Convert the current cart to database rows.
+        const rows = cartToDatabaseRows(userId, cartSnapshot);
+
+        // Save current items first.
+        if (rows.length > 0) {
+          const { error: upsertError } = await supabase
+            .from('user_cart_items')
+            .upsert(rows, {
+              onConflict:
+                'user_id,variant_id,specification_allocation_id',
+            });
+
+          if (upsertError) throw upsertError;
+        }
+
+        // Identify database rows that are no longer in the cart.
+        const currentKeys = new Set(
+          rows.map(
+            row =>
+              `${row.variant_id}::${row.specification_allocation_id}`
+          )
+        );
+
+        const staleRows = (existingRows ?? []).filter(
+          row =>
+            !currentKeys.has(
+              `${row.variant_id}::${row.specification_allocation_id}`
+            )
+        );
+
+        // Delete only stale rows belonging to this user.
+        for (const row of staleRows) {
+          const { error: deleteError } = await supabase
+            .from('user_cart_items')
+            .delete()
+            .eq('user_id', userId)
+            .eq('variant_id', row.variant_id)
+            .eq(
+              'specification_allocation_id',
+              row.specification_allocation_id
+            );
+
+          if (deleteError) throw deleteError;
+        }
+      })
+      .catch(error => {
+        console.error('[Cart] Account synchronization failed:', error);
+
+        showToast(
+          'Your cart could not be synced. Please check your connection.',
+          'warning'
+        );
+      });
+  }, [
+    cart,
+    currentUser?.id,
+    isAuthReady,
+    isCartReady,
+  ]);
 
   const signInWithGoogle = async (): Promise<void> => {
     if (!isSupabaseConfigured || !supabase) {
@@ -596,12 +1059,17 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [selectedNeighborhood]);
 
   useEffect(() => {
+    if (!isAuthReady || currentUser || !isCartReady) return;
+
     try {
-      localStorage.setItem('savannah_cart', JSON.stringify(cart));
-    } catch (e) {
-      console.error(e);
+      localStorage.setItem(
+        'savannah_guest_cart',
+        JSON.stringify(cart)
+      );
+    } catch (error) {
+      console.error('[Cart] Could not save guest cart:', error);
     }
-  }, [cart]);
+  }, [cart, currentUser, isAuthReady, isCartReady]);
 
   useEffect(() => {
     try {
@@ -628,29 +1096,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Cart Handlers
 
-  const getCartIdentity = (product: Product) => ({
-    productId: product.id,
-    variantId: product.variantId ?? product.id,
-    allocationId:
-      product.selectedSpecification?.id ??
-      (product.selectedSpecification
-        ? `${product.selectedSpecification.product_specification}::${product.selectedSpecification.note ?? ''}`
-        : null)
-  });
-
-  const isSameCartItem = (a: Product, b: Product): boolean => {
-    const first = getCartIdentity(a);
-    const second = getCartIdentity(b);
-
-    return (
-      first.productId === second.productId &&
-      first.variantId === second.variantId &&
-      first.allocationId === second.allocationId
-    );
-  };
 
   const addToCart = (product: Product, quantity = 1) => {
     if (quantity <= 0) return;
+
+    quantity = Math.min(1000, Math.floor(quantity));
 
     setCart(prev => {
       const existing = prev.find(item =>
@@ -686,6 +1136,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       removeFromCart(product);
       return;
     }
+
+    quantity = Math.min(1000, Math.floor(quantity));
 
     setCart(prev =>
       prev.map(item =>
@@ -765,14 +1217,24 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       };
     });
 
+    if (
+      isLoadingAddresses ||
+      !selectedAddressId ||
+      !activeSavedAddress ||
+      activeSavedAddress.id !== selectedAddressId
+    ) {
+      throw new Error(
+        'Please select a saved delivery address before placing your order.'
+      );
+    }
+
     const { data: createdOrderId, error: orderError } = await supabase.rpc(
       'create_order',
       {
         p_items: rpcItems,
         p_shipping_address: {
-          neighborhood_id: selectedNeighborhood.id,
+          address_id: selectedAddressId,
           delivery_method: orderData.deliveryMethod,
-          address: orderData.deliveryAddress.trim(),
           delivery_slot: orderData.deliverySlot,
         },
         p_customer_note: orderData.dropoffNote?.trim() || undefined,
@@ -828,6 +1290,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         ...prev.filter(order => order.id !== newOrder.id)
       ]);
     setActiveTrackOrder(newOrder);
+    clearCart();
 
     return newOrder;
   };
@@ -996,15 +1459,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setSearchQuery,
         selectedNeighborhood,
         setSelectedNeighborhood,
+        deliveryZones,
+        isLoadingDeliveryZones,
+        isLoadingAddresses,
         savedAddresses,
-        setSavedAddresses,
         selectedAddressId,
-        setSelectedAddressId,
         activeSavedAddress,
         selectAddress,
         addSavedAddress,
         updateSavedAddress,
+        deleteSavedAddress,
+        setDefaultSavedAddress,
         cart,
+        isCartReady,
         addToCart,
         removeFromCart,
         updateQuantity,

@@ -116,6 +116,8 @@ export interface SavedAddress {
   apartment: string;
   reference: string;
   instructions: string;
+  deliveryZoneId: string;
+  isDefault: boolean;
 }
 
 export interface CartItem {
@@ -188,4 +190,13 @@ export interface UserProfile {
   phone?: string;
   avatarUrl?: string;
   provider: 'google' | 'guest';
+}
+
+export interface DeliveryZone {
+  zone_id: string;
+  name: string;
+  delivery_fee_minor: number;
+  free_threshold_minor: number;
+  express_available: boolean;
+  is_active: boolean;
 }

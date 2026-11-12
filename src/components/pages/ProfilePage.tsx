@@ -17,7 +17,6 @@ import {
   UserPlus
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
-import { NAIROBI_NEIGHBORHOODS } from '../../data/neighborhoods';
 import savannahLogo from '../../assets/images/savannah_logo.png';
 
 export const ProfilePage: React.FC = () => {
@@ -26,7 +25,10 @@ export const ProfilePage: React.FC = () => {
     signOut,
     signInWithGoogle,
     savedAddresses,
-    setSavedAddresses,
+    deleteSavedAddress,
+    deliveryZones,
+    isLoadingAddresses,
+    isLoadingDeliveryZones,
     activeSavedAddress,
     selectAddress,
     addSavedAddress,
@@ -39,7 +41,7 @@ export const ProfilePage: React.FC = () => {
   const [isAddressesExpanded, setIsAddressesExpanded] = useState(false);
   const [isAddingAddress, setIsAddingAddress] = useState(false);
   const [newLabel, setNewLabel] = useState('Home');
-  const [newRegion, setNewRegion] = useState('Kilimani');
+  const [newRegion, setNewRegion] = useState('');
   const [newStreet, setNewStreet] = useState('');
   const [newApartment, setNewApartment] = useState('');
   const [newInstructions, setNewInstructions] = useState('');
@@ -75,17 +77,23 @@ export const ProfilePage: React.FC = () => {
     }
   };
 
-  const handleDeleteAddress = (id: string, e: React.MouseEvent) => {
+  const defaultSavedAddress =
+    savedAddresses.find(address => address.isDefault) ?? savedAddresses[0];
+
+  const handleDeleteAddress = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
+
     const addressToDelete = savedAddresses.find(a => a.id === id);
-    setSavedAddresses(prev => prev.filter(a => a.id !== id));
-    if (activeSavedAddress?.id === id) {
-      const remaining = savedAddresses.filter(a => a.id !== id);
-      if (remaining.length > 0) {
-        selectAddress(remaining[0].id);
-      }
+
+    try {
+      await deleteSavedAddress(id);
+      showToast(`Removed "${addressToDelete?.label || 'Address'}"`, 'success');
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : 'Could not delete address.',
+        'warning'
+      );
     }
-    showToast(`Removed "${addressToDelete?.label || 'Address'}"`, 'info');
   };
 
   const handleOpenAddAddress = (e?: React.MouseEvent) => {
@@ -99,41 +107,55 @@ export const ProfilePage: React.FC = () => {
     setFormError('');
   };
 
-  const handleSaveNewAddress = (e: React.FormEvent) => {
+  const handleSaveNewAddress = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (savedAddresses.length >= 4) {
-      setFormError('You can only save up to 4 addresses. Please delete one first.');
-      return;
-    }
-    if (!newLabel.trim()) {
-      setFormError('Please provide an address label (e.g. Home, Work).');
-      return;
-    }
-    if (!newStreet.trim()) {
-      setFormError('Please enter street / road name.');
-      return;
-    }
-    if (!newApartment.trim()) {
-      setFormError('Please enter building / apartment / house details.');
+      setFormError('You can only save up to 4 addresses.');
       return;
     }
 
-    addSavedAddress({
-      label: newLabel.trim(),
-      tag: newLabel.trim(),
-      region: newRegion,
-      street: newStreet.trim(),
-      apartment: newApartment.trim(),
-      reference: '',
-      instructions: newInstructions.trim()
-    });
+    if (!newLabel.trim() || !newStreet.trim() || !newApartment.trim() || !newRegion) {
+      setFormError('Please complete the address label, delivery zone, street and building details.');
+      return;
+    }
 
-    setIsAddingAddress(false);
-    setNewLabel('Home');
-    setNewStreet('');
-    setNewApartment('');
-    setNewInstructions('');
-    setFormError('');
+    try {
+      const selectedZone = deliveryZones.find(
+        zone => zone.zone_id === newRegion
+      );
+
+      if (!selectedZone) {
+        setFormError('Please select a valid delivery zone.');
+        return;
+      }
+
+      await addSavedAddress({
+        label: newLabel.trim(),
+        tag: newLabel.trim(),
+        region: selectedZone.name,
+        deliveryZoneId: selectedZone.zone_id,
+        street: newStreet.trim(),
+        apartment: newApartment.trim(),
+        reference: '',
+        instructions: newInstructions.trim(),
+        iconName: 'pin'
+      });
+
+      setIsAddingAddress(false);
+      setNewLabel('Home');
+      setNewRegion(deliveryZones[0]?.zone_id ?? '');
+      setNewStreet('');
+      setNewApartment('');
+      setNewInstructions('');
+      setFormError('');
+
+      showToast('Delivery address saved.', 'success');
+    } catch (error) {
+      setFormError(
+        error instanceof Error ? error.message : 'Could not save address.'
+      );
+    }
   };
 
   useEffect(() => {
@@ -151,6 +173,12 @@ export const ProfilePage: React.FC = () => {
       document.body.style.overflow = originalOverflow;
     };
   }, []);
+
+  useEffect(() => {
+    if (!newRegion && deliveryZones.length > 0) {
+      setNewRegion(deliveryZones[0].zone_id);
+    }
+  }, [deliveryZones, newRegion]);
 
   return (
     <div
@@ -370,14 +398,16 @@ export const ProfilePage: React.FC = () => {
                       <div className="text-xs text-stone-500 mt-0.5 truncate">
                         {savedAddresses.length === 0 ? (
                           <span className="text-stone-500">No addresses saved yet — click to add</span>
-                        ) : activeSavedAddress ? (
+                        ) : defaultSavedAddress ? (
                           <span className="flex items-center gap-1.5">
                             <span className="text-stone-400">Default:</span>
-                            <span className="font-semibold text-stone-800">{activeSavedAddress.label}</span>
+                            <span className="font-semibold text-stone-800">{defaultSavedAddress.label}</span>
                             <span className="text-stone-300">•</span>
-                            <span className="text-emerald-800 font-medium">{activeSavedAddress.region}</span>
-                            {activeSavedAddress.apartment && (
-                              <span className="text-stone-400 hidden sm:inline truncate">({activeSavedAddress.apartment})</span>
+                            <span className="text-emerald-800 font-medium">{defaultSavedAddress.region}</span>
+                            {defaultSavedAddress.apartment && (
+                              <span className="text-stone-400 hidden sm:inline truncate">
+                                ({defaultSavedAddress.apartment})
+                              </span>
                             )}
                           </span>
                         ) : (
@@ -488,16 +518,19 @@ export const ProfilePage: React.FC = () => {
                               <select
                                 value={newRegion}
                                 onChange={e => setNewRegion(e.target.value)}
-                                className="w-full text-xs px-3 py-2 rounded-lg border border-stone-300 bg-white focus:outline-none focus:ring-1 focus:ring-[#173b28] focus:border-[#173b28] cursor-pointer"
+                                disabled={isLoadingDeliveryZones || deliveryZones.length === 0}
+                                required
+                                className="w-full text-xs px-3 py-2 rounded-lg border border-stone-300 bg-white focus:outline-none focus:ring-1 focus:ring-[#173b28] focus:border-[#173b28] cursor-pointer disabled:bg-stone-100"
                               >
-                                {NAIROBI_NEIGHBORHOODS.map(nh => {
-                                  const name = nh.name.split('&')[0].trim();
-                                  return (
-                                    <option key={nh.id} value={name}>
-                                      {nh.name} ({nh.zone})
-                                    </option>
-                                  );
-                                })}
+                                <option value="">
+                                  {isLoadingDeliveryZones ? 'Loading delivery zones...' : 'Select a delivery zone'}
+                                </option>
+
+                                {deliveryZones.map(zone => (
+                                  <option key={zone.zone_id} value={zone.zone_id}>
+                                    {zone.name}
+                                  </option>
+                                ))}
                               </select>
                             </div>
 
@@ -615,7 +648,7 @@ export const ProfilePage: React.FC = () => {
                                     <span className="font-display font-bold text-stone-900 text-xs break-words">
                                       {addr.label}
                                     </span>
-                                    {isSelected && (
+                                    {addr.isDefault && (
                                       <span className="text-[9.5px] font-semibold bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded leading-none shrink-0">
                                         Default
                                       </span>
